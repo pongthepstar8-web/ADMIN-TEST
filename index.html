@@ -4063,10 +4063,10 @@ let aiMapInited = false,
   aiMarkers = [],
   aiAllPoints = [];
 
-const PROVINCE_GEOJSON_URL =
-  'https://pongthepstar8-web.github.io/Dashboard-PRO-MAX/assets/thailand-provinces.geojson';
+  const DISTRICT_GEOJSON_URL =
+  'https://pongthepstar8-web.github.io/Dashboard-PRO-MAX/assets/thailand-districts.geojson';
 
-let provinceBoundaryLayer = null;
+let districtBoundaryLayer = null;
   aiAllPoints = [],
   onsiteEngineerIndex = {},
   departedEngineerIndex = {},
@@ -4255,6 +4255,84 @@ async function renderSelectedProvinceBoundary() {
   }
 }
 
+function getDistrictNameFromFeature(feature) {
+  let p = feature.properties || {};
+
+  return String(
+    p.shapeName ||
+    p.ADM2_TH ||
+    p.ADM2_EN ||
+    p.DISTRICT ||
+    p.district ||
+    p.NAME_2 ||
+    p.name ||
+    ''
+  ).trim();
+}
+
+function normalizeDistrictBoundaryName(v) {
+  return String(v || '')
+    .trim()
+    .replace(/^อำเภอ/g, '')
+    .replace(/^อ\./g, '')
+    .replace(/\s+/g, '')
+    .toLowerCase();
+}
+
+async function renderDistrictBoundaries() {
+  if (!aiMap) return;
+
+  if (districtBoundaryLayer) {
+    aiMap.removeLayer(districtBoundaryLayer);
+    districtBoundaryLayer = null;
+  }
+
+  let activeDistricts = {};
+
+  (jobs || []).forEach((job) => {
+    let d = job['District Name'] || '';
+
+    if (!d) return;
+
+    activeDistricts[normalizeDistrictBoundaryName(d)] = true;
+  });
+
+  try {
+    let res = await fetch(DISTRICT_GEOJSON_URL + '?ts=' + Date.now());
+    let geojson = await res.json();
+
+    districtBoundaryLayer = w.L.geoJSON(geojson, {
+      style: function (feature) {
+        let districtName = getDistrictNameFromFeature(feature);
+        let norm = normalizeDistrictBoundaryName(districtName);
+        let isActive = !!activeDistricts[norm];
+
+        return {
+          color: isActive ? '#facc15' : '#64748b',
+          weight: isActive ? 3 : 1,
+          opacity: isActive ? 0.95 : 0.18,
+          fillColor: isActive ? '#facc15' : '#0f172a',
+          fillOpacity: isActive ? 0.08 : 0.01
+        };
+      },
+
+      onEachFeature: function (feature, layer) {
+        let districtName = getDistrictNameFromFeature(feature);
+
+        if (districtName) {
+          layer.bindTooltip(districtName, {
+            sticky: true
+          });
+        }
+      }
+    }).addTo(aiMap);
+
+    console.log('DISTRICT BOUNDARY READY');
+  } catch (err) {
+    console.warn('โหลด District GeoJSON ไม่สำเร็จ:', err);
+  }
+}
+
         w.initAIMap = function () {
           if (aiMapInited) {
             setTimeout(() => aiMap && aiMap.invalidateSize(), 250);
@@ -4275,6 +4353,8 @@ async function renderSelectedProvinceBoundary() {
           renderSelectedProvinceBoundary();
 
           buildAIMapMarkers().then(() => {
+  renderDistrictBoundaries();
+
   buildOnsiteEngineerSelect();
   buildDepartedEngineerSelect();
   applyMapAdminPermission();
