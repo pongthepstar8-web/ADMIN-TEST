@@ -4060,11 +4060,13 @@ w.document.write(html);
 w.document.close();
 let aiMapInited = false,
   aiMap = null,
-  const PROVINCE_GEOJSON_URL =
+  aiMarkers = [],
+  aiAllPoints = [];
+
+const PROVINCE_GEOJSON_URL =
   'https://pongthepstar8-web.github.io/Dashboard-PRO-MAX/assets/thailand-provinces.geojson';
 
 let provinceBoundaryLayer = null;
-  aiMarkers = [],
   aiAllPoints = [],
   onsiteEngineerIndex = {},
   departedEngineerIndex = {},
