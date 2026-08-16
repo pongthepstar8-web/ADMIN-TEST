@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🚀 NOC Command Center</title>
+    <title>🚀 TEST NOC Command Center</title>
 
     <!-- ✅ LIB -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -4060,6 +4060,10 @@ w.document.write(html);
 w.document.close();
 let aiMapInited = false,
   aiMap = null,
+  const PROVINCE_GEOJSON_URL =
+  'https://pongthepstar8-web.github.io/Dashboard-PRO-MAX/assets/thailand-provinces.geojson';
+
+let provinceBoundaryLayer = null;
   aiMarkers = [],
   aiAllPoints = [],
   onsiteEngineerIndex = {},
@@ -4174,6 +4178,81 @@ let aiMapInited = false,
 
   w.document.body.appendChild(box);
 };
+
+function getProvinceNameFromFeature(feature) {
+  let p = feature.properties || {};
+
+  return String(
+    p.PROVINCE ||
+    p.province ||
+    p.PROV_NAM_T ||
+    p.prov_nam_t ||
+    p.NAME_1 ||
+    p.name ||
+    ''
+  ).trim();
+}
+
+async function renderSelectedProvinceBoundary() {
+  if (!aiMap) return;
+
+  if (provinceBoundaryLayer) {
+    aiMap.removeLayer(provinceBoundaryLayer);
+    provinceBoundaryLayer = null;
+  }
+
+  let selectedProvince = String($('#provinceFilter').val() || '').trim();
+
+  try {
+    let res = await fetch(PROVINCE_GEOJSON_URL + '?ts=' + Date.now());
+    let geojson = await res.json();
+
+    let selectedBounds = null;
+
+    provinceBoundaryLayer = w.L.geoJSON(geojson, {
+      style: function (feature) {
+        let provinceName = getProvinceNameFromFeature(feature);
+        let isSelected =
+          selectedProvince &&
+          provinceName === selectedProvince;
+
+        return {
+          color: isSelected ? '#facc15' : '#64748b',
+          weight: isSelected ? 5 : 1,
+          opacity: isSelected ? 1 : 0.25,
+          fillColor: isSelected ? '#facc15' : '#0f172a',
+          fillOpacity: isSelected ? 0.08 : 0.02
+        };
+      },
+
+      onEachFeature: function (feature, layer) {
+        let provinceName = getProvinceNameFromFeature(feature);
+
+        if (provinceName) {
+          layer.bindTooltip(provinceName, {
+            sticky: true
+          });
+        }
+
+        if (
+          selectedProvince &&
+          provinceName === selectedProvince
+        ) {
+          selectedBounds = layer.getBounds();
+        }
+      }
+    }).addTo(aiMap);
+
+    if (selectedBounds) {
+      aiMap.fitBounds(selectedBounds, {
+        padding: [50, 50]
+      });
+    }
+  } catch (err) {
+    console.warn('โหลด Province Boundary ไม่สำเร็จ:', err);
+  }
+}
+
         w.initAIMap = function () {
           if (aiMapInited) {
             setTimeout(() => aiMap && aiMap.invalidateSize(), 250);
@@ -4191,6 +4270,7 @@ let aiMapInited = false,
             maxZoom: 19,
             attribution: '© OpenStreetMap',
           }).addTo(aiMap);
+          renderSelectedProvinceBoundary();
 
           buildAIMapMarkers().then(() => {
   buildOnsiteEngineerSelect();
