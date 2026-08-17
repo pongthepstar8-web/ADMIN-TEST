@@ -2546,6 +2546,14 @@ w.document.write(`
     <head>
       <title>AI Action Board</title>
       <style>
+
+        .district-boundary-path {
+  stroke: #94a3b8 !important;
+  stroke-width: 0.5 !important;
+  stroke-opacity: 0.18 !important;
+  fill-opacity: 0 !important;
+}
+
         html,
         body {
           margin: 0;
@@ -4291,39 +4299,44 @@ async function renderDistrictBoundaries() {
     let res = await fetch(DISTRICT_GEOJSON_URL + '?ts=' + Date.now());
     let geojson = await res.json();
 
-    districtBoundaryLayer = w.L.geoJSON(geojson, {
-  interactive: true,
-
-  style: function () {
-  return {
-    color: '#94a3b8',
-    weight: 0.5,
-    opacity: 0.18,
-    fillColor: '#0f172a',
-    fillOpacity: 0
-  };
-},
-
-  onEachFeature: function (feature, layer) {
-    let districtName = getDistrictNameFromFeature(feature);
-
-    if (districtName) {
-      layer.bindTooltip(districtName, {
-        sticky: true
-      });
+    if (!aiMap.getPane('districtBoundaryPane')) {
+      aiMap.createPane('districtBoundaryPane');
+      aiMap.getPane('districtBoundaryPane').style.zIndex = 250;
+      aiMap.getPane('districtBoundaryPane').style.pointerEvents = 'auto';
     }
-  }
-}).addTo(aiMap);
 
-/* บังคับ style ซ้ำหลัง addTo กัน CSS หรือ default style ทับ */
-districtBoundaryLayer.setStyle({
-  color: '#94a3b8',
-  weight: 0.5,
-  opacity: 0.18,
-  fillOpacity: 0
-});
+    districtBoundaryLayer = w.L.geoJSON(geojson, {
+      pane: 'districtBoundaryPane',
+      interactive: true,
 
-districtBoundaryLayer.bringToB*ck();
+      style: function () {
+        return {
+          color: '#94a3b8',
+          weight: 0.5,
+          opacity: 0.18,
+          fillColor: '#0f172a',
+          fillOpacity: 0,
+          className: 'district-boundary-path'
+        };
+      },
+
+      onEachFeature: function (feature, layer) {
+        let districtName = getDistrictNameFromFeature(feature);
+
+        if (districtName) {
+          layer.bindTooltip(districtName, {
+            sticky: true
+          });
+        }
+      }
+    }).addTo(aiMap);
+
+    districtBoundaryLayer.setStyle({
+      color: '#94a3b8',
+      weight: 0.5,
+      opacity: 0.18,
+      fillOpacity: 0
+    });
 
     console.log('DISTRICT BOUNDARY READY:', {
       count: geojson.features ? geojson.features.length : 0
@@ -4355,7 +4368,7 @@ districtBoundaryLayer.bringToB*ck();
 // renderSelectedProvinceBoundary();
 
 buildAIMapMarkers().then(() => {
-  renderDistrictBoundaries();
+  //renderDistrictBoundaries();
 
   buildOnsiteEngineerSelect();
   buildDepartedEngineerSelect();
