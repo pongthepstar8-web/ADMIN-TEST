@@ -2546,14 +2546,6 @@ w.document.write(`
     <head>
       <title>AI Action Board</title>
       <style>
-
-        .district-boundary-path {
-  stroke: #94a3b8 !important;
-  stroke-width: 0.5 !important;
-  stroke-opacity: 0.18 !important;
-  fill-opacity: 0 !important;
-}
-
         html,
         body {
           margin: 0;
@@ -2924,6 +2916,51 @@ let staff = shiftStaffMap[key] || {};
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
 
       <style>
+
+        .map-select {
+  height: 46px;
+  min-width: 300px;
+  background: #1e293b;
+  color: #ffffff;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 0 42px 0 14px;
+  font-weight: 900;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, #e5e7eb 50%),
+    linear-gradient(135deg, #e5e7eb 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) 19px,
+    calc(100% - 12px) 19px;
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+}
+
+.map-select:hover {
+  border-color: #64748b;
+}
+
+.map-select:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+}
+        
+        .district-boundary-path {
+  stroke: #94a3b8 !important;
+  stroke-width: 0.5 !important;
+  stroke-opacity: 0.18 !important;
+  fill-opacity: 0 !important;
+}
 
         .engineer-route-dd {
   position: relative;
@@ -3991,7 +4028,7 @@ Object.entries(engineers)
     onclick="window.toggleEngineerRouteDropdown('departedEngineerDropdown', event)"
   >
     <span id="departedEngineerDropdownLabel">🚗 Departed ล่าสุด</span>
-    <span>⌄</span>
+    <span class="dropdown-arrow">▾</span>
   </button>
 
   <div class="engineer-route-dd-panel">
