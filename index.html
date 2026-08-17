@@ -4146,6 +4146,8 @@ let districtBoundaryLayer = null;
 
   let nearbyJobMarkers = [];
   let nearbyJobLines = [];
+  let currentNearbyEngineer = null;
+  let currentNearbyJobs = [];
 
   w.showAIOperationsNotice = function (title, message) {
   let old = w.document.getElementById('aiOperationsNotice');
@@ -6214,6 +6216,7 @@ function clearNearbyJobHighlights() {
   nearbyJobLines = [];
 }
 
+
 function drawNearbyJobHighlights(engineer, topJobs) {
   if (!aiMap || !engineer || !engineer.coord || !topJobs || !topJobs.length) {
     return;
@@ -6280,16 +6283,31 @@ function drawNearbyJobHighlights(engineer, topJobs) {
     }).addTo(aiMap);
 
     marker.bindPopup(`
-      <div style="color:#111;font-family:Arial;min-width:220px">
-        <b>🔎 Nearby Job #${rank}</b><br>
-        <b>${job['Job ID'] || '-'}</b><br>
-        ${item.dist.toFixed(2)} km<br>
-        Priority: ${job['Priority'] || '-'}<br>
-        Status: ${job['Status'] || '-'}<br>
-        ${job['Province Name'] || '-'} / ${job['District Name'] || '-'}<br><br>
-        ${job['Job Title'] || '-'}
-      </div>
-    `);
+  <div style="color:#111;font-family:Arial;min-width:230px">
+    <b>🔎 Nearby Job #${rank}</b><br>
+    <b>${job['Job ID'] || '-'}</b><br>
+    ${item.dist.toFixed(2)} km<br>
+    Priority: ${job['Priority'] || '-'}<br>
+    Status: ${job['Status'] || '-'}<br>
+    ${job['Province Name'] || '-'} / ${job['District Name'] || '-'}<br><br>
+    ${String(job['Job Title'] || '-').slice(0, 100)}<br><br>
+
+    <button
+      onclick="window.removeNearbyJobByRank(${idx})"
+      style="
+        background:#dc2626;
+        color:white;
+        border:none;
+        border-radius:8px;
+        padding:6px 10px;
+        font-weight:bold;
+        cursor:pointer;
+      "
+    >
+      🗑️ ลบออกจาก Nearby
+    </button>
+  </div>
+`);
 
     nearbyJobMarkers.push(marker);
   });
@@ -6355,14 +6373,46 @@ w.scanNearbyJobs = async function () {
 
   let topJobs = candidates.slice(0, 5);
 
-  if (!topJobs.length) {
-    w.showAIOperationsNotice(
-      'ไม่พบ Nearby Jobs',
-      'ไม่พบงานที่ยังเปิดอยู่ใกล้ตำแหน่งล่าสุดของช่างคนนี้'
-    );
+if (!topJobs.length) {
+  clearNearbyJobHighlights();
+
+  currentNearbyEngineer = null;
+  currentNearbyJobs = [];
+
+  w.showAIOperationsNotice(
+    'ไม่พบ Nearby Jobs',
+    'ไม่พบงานที่ยังเปิดอยู่ใกล้ตำแหน่งล่าสุดของช่างคนนี้'
+  );
+  return;
+}
+
+currentNearbyEngineer = engineer;
+currentNearbyJobs = topJobs;
+
+w.removeNearbyJobByRank = function (index) {
+  index = Number(index);
+
+  if (
+    isNaN(index) ||
+    index < 0 ||
+    index >= currentNearbyJobs.length
+  ) {
     return;
   }
-  drawNearbyJobHighlights(engineer, topJobs);
+
+  currentNearbyJobs.splice(index, 1);
+
+  clearNearbyJobHighlights();
+
+  if (!currentNearbyEngineer || currentNearbyJobs.length === 0) {
+    currentNearbyJobs = [];
+    return;
+  }
+
+  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
+};
+
+
 
   let lines = [];
 
