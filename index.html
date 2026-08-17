@@ -6389,6 +6389,9 @@ if (!topJobs.length) {
 currentNearbyEngineer = engineer;
 currentNearbyJobs = topJobs;
 
+drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
+};
+
 w.removeNearbyJobByRank = function (index) {
   index = Number(index);
 
@@ -6411,8 +6414,6 @@ w.removeNearbyJobByRank = function (index) {
 
   drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
 };
-
-
 
   let lines = [];
 
