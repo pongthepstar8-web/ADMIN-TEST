@@ -4079,6 +4079,10 @@ Object.entries(engineers)
         🧹 Clear Route
       </button>
 
+      <button class="map-tools-item" onclick="window.scanNearbyJobs()">
+  🔎 Scan Nearby Jobs
+</button>
+
       <button class="map-tools-item" onclick="window.fitAllMarkers()">
         📍 Fit All Jobs
       </button>
@@ -5975,6 +5979,8 @@ group.jobs.forEach((job) => {
   let key = String(name || '').toLowerCase().trim();
 
   if (!key) return;
+  w.currentNearbyEngineerKey = key;
+w.currentNearbyEngineerName = name || '';
 
   // ✅ 1. หา On-site ปัจจุบันจาก marker index ก่อน
   let item = onsiteEngineerIndex[key];
@@ -6079,6 +6085,9 @@ w.focusDepartedEngineer = async function (name) {
 
   if (!key) return;
 
+  w.currentNearbyEngineerKey = key;
+w.currentNearbyEngineerName = name || '';
+
   let item = departedEngineerIndex[key];
 
   if (!item) {
@@ -6113,7 +6122,183 @@ w.focusDepartedEngineer = async function (name) {
   }, 350);
 };
 
+function getCurrentNearbyEngineerLocation() {
+  let key = String(w.currentNearbyEngineerKey || w.selectedEngineer || '')
+    .toLowerCase()
+    .trim();
 
+  if (!key) {
+    return null;
+  }
+
+  let onsiteItem = onsiteEngineerIndex && onsiteEngineerIndex[key];
+
+  if (onsiteItem) {
+    let coord =
+      onsiteItem.coord ||
+      (
+        onsiteItem.group &&
+        !isNaN(Number(onsiteItem.group.lat)) &&
+        !isNaN(Number(onsiteItem.group.lng))
+          ? [Number(onsiteItem.group.lat), Number(onsiteItem.group.lng)]
+          : null
+      );
+
+    if (coord) {
+      return {
+        key: key,
+        name: onsiteItem.assign || w.currentNearbyEngineerName || key,
+        coord: coord,
+        source: 'CURRENT_ONSITE',
+        jobId: onsiteItem.job ? onsiteItem.job['Job ID'] || '' : ''
+      };
+    }
+  }
+
+  let departedItem = departedEngineerIndex && departedEngineerIndex[key];
+
+  if (departedItem) {
+    let coord =
+      departedItem.coord ||
+      (
+        departedItem.group &&
+        !isNaN(Number(departedItem.group.lat)) &&
+        !isNaN(Number(departedItem.group.lng))
+          ? [Number(departedItem.group.lat), Number(departedItem.group.lng)]
+          : null
+      );
+
+    if (coord) {
+      return {
+        key: key,
+        name: departedItem.assign || w.currentNearbyEngineerName || key,
+        coord: coord,
+        source: 'DEPARTED',
+        jobId: departedItem.job ? departedItem.job['Job ID'] || '' : ''
+      };
+    }
+  }
+
+  let history = TRAVEL_HISTORY && TRAVEL_HISTORY[key];
+
+  if (
+    history &&
+    !isNaN(Number(history.lat)) &&
+    !isNaN(Number(history.lng))
+  ) {
+    return {
+      key: key,
+      name: history.assign || w.currentNearbyEngineerName || key,
+      coord: [Number(history.lat), Number(history.lng)],
+      source: 'TRAVEL_HISTORY',
+      jobId: history.jobId || ''
+    };
+  }
+
+  return null;
+}
+
+w.scanNearbyJobs = async function () {
+  if (!aiMap) return;
+
+  let engineer = getCurrentNearbyEngineerLocation();
+
+  if (!engineer) {
+    w.showAIOperationsNotice(
+      'ยังไม่ได้เลือกช่าง',
+      'กรุณาเลือกช่างจาก Departed ล่าสุด หรือ On-site ปัจจุบัน / ล่าสุด ก่อนใช้งาน Scan Nearby Jobs'
+    );
+    return;
+  }
+
+  let candidates = [];
+
+  for (const job of jobs) {
+    let status = String(job['Status'] || '').toLowerCase();
+
+    if (status.includes('done') || status.includes('cancel')) {
+      continue;
+    }
+
+    if (
+      engineer.jobId &&
+      String(job['Job ID'] || '') === String(engineer.jobId)
+    ) {
+      continue;
+    }
+
+    let coord = await getJobCoord(job);
+
+    if (!coord) {
+      continue;
+    }
+
+    let dist = distanceKm(
+      engineer.coord[0],
+      engineer.coord[1],
+      coord[0],
+      coord[1]
+    );
+
+    candidates.push({
+      job: job,
+      coord: coord,
+      dist: dist
+    });
+  }
+
+  candidates.sort((a, b) => a.dist - b.dist);
+
+  let topJobs = candidates.slice(0, 5);
+
+  if (!topJobs.length) {
+    w.showAIOperationsNotice(
+      'ไม่พบ Nearby Jobs',
+      'ไม่พบงานที่ยังเปิดอยู่ใกล้ตำแหน่งล่าสุดของช่างคนนี้'
+    );
+    return;
+  }
+
+  let lines = [];
+
+  lines.push('ช่าง: ' + (engineer.name || '-'));
+  lines.push('ตำแหน่งอ้างอิง: ' + engineer.source);
+  lines.push('');
+
+  topJobs.forEach((item, idx) => {
+    let job = item.job;
+
+    lines.push(
+      (idx + 1) + '. ' +
+      (job['Job ID'] || '-') +
+      ' | ' +
+      item.dist.toFixed(2) + ' km' +
+      ' | ' +
+      (job['Priority'] || '-') +
+      ' | ' +
+      (job['Status'] || '-')
+    );
+
+    lines.push(
+      '   ' +
+      (job['Province Name'] || '-') +
+      ' / ' +
+      (job['District Name'] || '-')
+    );
+
+    lines.push(
+      '   ' +
+      String(job['Job Title'] || '-').slice(0, 120)
+    );
+
+    lines.push('');
+  });
+
+  w.showAIOperationsNotice(
+    'Scan Nearby Jobs',
+    lines.join('\n')
+  );
+};
 
 function normalizeSiteSearchText(v) {
   let tokens =
@@ -7401,6 +7586,8 @@ w.document.addEventListener('click', function (e) {
           }
         };
         w.selectedEngineer = '';
+w.currentNearbyEngineerKey = '';
+w.currentNearbyEngineerName = '';
 
         w.filterEngineer = function (assign, btn) {
           w.selectedEngineer = (assign || '').toLowerCase().trim();
