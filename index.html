@@ -4301,41 +4301,45 @@ async function renderDistrictBoundaries() {
 
     if (!aiMap.getPane('districtBoundaryPane')) {
       aiMap.createPane('districtBoundaryPane');
-      aiMap.getPane('districtBoundaryPane').style.zIndex = 250;
-      aiMap.getPane('districtBoundaryPane').style.pointerEvents = 'auto';
     }
+
+    let pane = aiMap.getPane('districtBoundaryPane');
+
+    pane.style.zIndex = 250;
+    pane.style.pointerEvents = 'none';
 
     districtBoundaryLayer = w.L.geoJSON(geojson, {
       pane: 'districtBoundaryPane',
-      interactive: true,
+      interactive: false,
 
       style: function () {
         return {
           color: '#94a3b8',
-          weight: 0.5,
-          opacity: 0.18,
+          weight: 0.45,
+          opacity: 0.16,
           fillColor: '#0f172a',
-          fillOpacity: 0,
-          className: 'district-boundary-path'
+          fillOpacity: 0
         };
-      },
-
-      onEachFeature: function (feature, layer) {
-        let districtName = getDistrictNameFromFeature(feature);
-
-        if (districtName) {
-          layer.bindTooltip(districtName, {
-            sticky: true
-          });
-        }
       }
     }).addTo(aiMap);
 
-    districtBoundaryLayer.setStyle({
-      color: '#94a3b8',
-      weight: 0.5,
-      opacity: 0.18,
-      fillOpacity: 0
+    districtBoundaryLayer.eachLayer(function (layer) {
+      if (layer.setStyle) {
+        layer.setStyle({
+          color: '#94a3b8',
+          weight: 0.45,
+          opacity: 0.16,
+          fillOpacity: 0
+        });
+      }
+
+      if (layer._path) {
+        layer._path.style.stroke = '#94a3b8';
+        layer._path.style.strokeWidth = '0.45';
+        layer._path.style.strokeOpacity = '0.16';
+        layer._path.style.fillOpacity = '0';
+        layer._path.style.outline = 'none';
+      }
     });
 
     console.log('DISTRICT BOUNDARY READY:', {
@@ -4345,6 +4349,7 @@ async function renderDistrictBoundaries() {
     console.warn('โหลด District GeoJSON ไม่สำเร็จ:', err);
   }
 }
+
 
         w.initAIMap = function () {
           if (aiMapInited) {
@@ -4368,7 +4373,7 @@ async function renderDistrictBoundaries() {
 // renderSelectedProvinceBoundary();
 
 buildAIMapMarkers().then(() => {
-  //renderDistrictBoundaries();
+  renderDistrictBoundaries();
 
   buildOnsiteEngineerSelect();
   buildDepartedEngineerSelect();
