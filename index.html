@@ -1762,7 +1762,11 @@ function getShiftStaffMapByProvince(province) {
 
       if (!key) return;
 
-      map[key] = {
+      if (!isMatchTopSearchProvinceGroup(x.province)) {
+  return;
+}
+
+map[key] = {
   name: x.name || '',
   mobile: formatMobileDisplay(x.mobile),
   province: x.province || '',
@@ -2836,24 +2840,29 @@ Object.values(shiftStaffMap).forEach((staff) => {
 
   if (!eng) return;
 
+  if (!isMatchTopSearchProvinceGroup(staff.province)) {
+    return;
+  }
+
   if (!engineers[eng]) {
     engineers[eng] = {
       jobs: [],
       districts: new Set(),
       fromShift: true,
       mobile: String(staff.mobile || '')
-  .replace(/tel:\S+\s*/i, '')
-  .trim(),
+        .replace(/tel:\S+\s*/i, '')
+        .trim(),
       local: staff.local || '',
       shift: staff.shift || '',
       province: staff.province || ''
     };
   }
+
   if (!engineers[eng].mobile && staff.mobile) {
-  engineers[eng].mobile = String(staff.mobile || '')
-    .replace(/^tel:\S+\s*/i, '')
-    .trim();
-}
+    engineers[eng].mobile = String(staff.mobile || '')
+      .replace(/^tel:\S+\s*/i, '')
+      .trim();
+  }
 });
 
 // ✅ 2. เติมงานจาก Assign to
