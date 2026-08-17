@@ -5897,7 +5897,7 @@ updateDistrictSourceButton();
               group._offsetIndex || 0,
               group._offsetTotal || 1
             );
-
+            
             let marker = w.L.marker(displayCoord, {
   icon: makeMapIcon(mainJob),
 })
@@ -6272,13 +6272,14 @@ function drawNearbyJobHighlights(engineer, topJobs) {
   let rank = idx + 1;
   let jobCount = item.count || (item.jobs ? item.jobs.length : 1);
 
-  let displayCoord = offsetNearbyJobMarkerCoord(
-    coord,
-    idx,
-    topJobs.length
-  );
+  let displayCoord = coord;
 
-  bounds.push(displayCoord);
+bounds.push(displayCoord);
+
+if (!aiMap.getPane('nearbyJobLinePane')) {
+  aiMap.createPane('nearbyJobLinePane');
+  aiMap.getPane('nearbyJobLinePane').style.zIndex = 430;
+}
 
   let line = w.L.polyline(
     [
@@ -6286,6 +6287,7 @@ function drawNearbyJobHighlights(engineer, topJobs) {
       displayCoord
     ],
     {
+      pane: 'nearbyJobLinePane',
       color: '#38bdf8',
       weight: 2,
       opacity: 0.45,
@@ -6297,9 +6299,16 @@ function drawNearbyJobHighlights(engineer, topJobs) {
 
   nearbyJobLines.push(line);
 
-  let marker = w.L.marker(displayCoord, {
-    nearbyJobLayer: true,
-    icon: w.L.divIcon({
+  if (!aiMap.getPane('nearbyJobMarkerPane')) {
+  aiMap.createPane('nearbyJobMarkerPane');
+  aiMap.getPane('nearbyJobMarkerPane').style.zIndex = 680;
+}
+
+let marker = w.L.marker(displayCoord, {
+  pane: 'nearbyJobMarkerPane',
+  zIndexOffset: 10000,
+  nearbyJobLayer: true,
+  icon: w.L.divIcon({
       className: '',
       html: `
         <div style="
