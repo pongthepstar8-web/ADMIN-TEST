@@ -4316,10 +4316,12 @@ async function renderDistrictBoundaries() {
 }).addTo(aiMap);
 
 /* บังคับ style ซ้ำหลัง addTo กัน CSS หรือ default style ทับ */
-districtBoundaryLayer.setStyle({*  color: '#94a3b8',
-  weight: 0.5,*  opacity: 0.18,
+districtBoundaryLayer.setStyle({
+  color: '#94a3b8',
+  weight: 0.5,
+  opacity: 0.18,
   fillOpacity: 0
-*);
+});
 
 districtBoundaryLayer.bringToB*ck();
 
