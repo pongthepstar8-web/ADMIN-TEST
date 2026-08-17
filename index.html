@@ -6364,6 +6364,48 @@ let marker = w.L.marker(displayCoord, {
     })
   }).addTo(aiMap);
 
+  let groupItems = item.items || [];
+
+if (!groupItems.length && item.jobs && item.jobs.length) {
+  groupItems = item.jobs.map((j) => {
+    return {
+      job: j,
+      dist: item.dist
+    };
+  });
+}
+
+if (!groupItems.length && item.job) {
+  groupItems = [
+    {
+      job: item.job,
+      dist: item.dist
+    }
+  ];
+}
+
+let groupJobsHtml = groupItems
+  .map((groupItem, jobIdx) => {
+    let groupJob = groupItem.job || {};
+
+    return `
+      <div style="
+        border-top:${jobIdx === 0 ? 'none' : '1px solid #e5e7eb'};
+        padding-top:${jobIdx === 0 ? '0' : '8px'};
+        margin-top:${jobIdx === 0 ? '0' : '8px'};
+      ">
+        <b>${jobIdx + 1}. ${groupJob['Job ID'] || '-'}</b><br>
+        ${Number(groupItem.dist || item.dist || 0).toFixed(2)} km<br>
+        Priority: ${groupJob['Priority'] || '-'}<br>
+        Status: ${groupJob['Status'] || '-'}<br>
+        ${groupJob['Province Name'] || '-'} / ${groupJob['District Name'] || '-'}<br>
+        ${String(groupJob['Job Title'] || '-').slice(0, 90)}
+      </div>
+    `;
+  })
+  .join('');
+
+
   marker.bindPopup(`
   <div style="color:#111;font-family:Arial;min-width:260px;max-width:340px">
     <b>🔎 Nearby Job #${rank}</b><br>
