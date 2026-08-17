@@ -6390,31 +6390,6 @@ w.scanNearbyJobs = async function () {
   currentNearbyJobs = topJobs;
 
   drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
-};
-
-w.removeNearbyJobByRank = function (index) {
-  index = Number(index);
-
-  if (
-    isNaN(index) ||
-    index < 0 ||
-    index >= currentNearbyJobs.length
-  ) {
-    return;
-  }
-
-  currentNearbyJobs.splice(index, 1);
-
-  clearNearbyJobHighlights();
-
-  if (!currentNearbyEngineer || currentNearbyJobs.length === 0) {
-    currentNearbyJobs = [];
-    return;
-  }
-
-  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
-};
-
 
   let lines = [];
 
@@ -6455,6 +6430,29 @@ w.removeNearbyJobByRank = function (index) {
     'Scan Nearby Jobs',
     lines.join('\n')
   );
+};
+
+w.removeNearbyJobByRank = function (index) {
+  index = Number(index);
+
+  if (
+    isNaN(index) ||
+    index < 0 ||
+    index >= currentNearbyJobs.length
+  ) {
+    return;
+  }
+
+  currentNearbyJobs.splice(index, 1);
+
+  clearNearbyJobHighlights();
+
+  if (!currentNearbyEngineer || currentNearbyJobs.length === 0) {
+    currentNearbyJobs = [];
+    return;
+  }
+
+  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
 };
 
 function normalizeSiteSearchText(v) {
