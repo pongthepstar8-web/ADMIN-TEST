@@ -6373,23 +6373,23 @@ w.scanNearbyJobs = async function () {
 
   let topJobs = candidates.slice(0, 5);
 
-if (!topJobs.length) {
-  clearNearbyJobHighlights();
+  if (!topJobs.length) {
+    clearNearbyJobHighlights();
 
-  currentNearbyEngineer = null;
-  currentNearbyJobs = [];
+    currentNearbyEngineer = null;
+    currentNearbyJobs = [];
 
-  w.showAIOperationsNotice(
-    'ไม่พบ Nearby Jobs',
-    'ไม่พบงานที่ยังเปิดอยู่ใกล้ตำแหน่งล่าสุดของช่างคนนี้'
-  );
-  return;
-}
+    w.showAIOperationsNotice(
+      'ไม่พบ Nearby Jobs',
+      'ไม่พบงานที่ยังเปิดอยู่ใกล้ตำแหน่งล่าสุดของช่างคนนี้'
+    );
+    return;
+  }
 
-currentNearbyEngineer = engineer;
-currentNearbyJobs = topJobs;
+  currentNearbyEngineer = engineer;
+  currentNearbyJobs = topJobs;
 
-drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
+  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
 };
 
 w.removeNearbyJobByRank = function (index) {
