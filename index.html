@@ -4287,47 +4287,39 @@ async function renderDistrictBoundaries() {
     districtBoundaryLayer = null;
   }
 
-  let activeDistricts = {};
-
-  (jobs || []).forEach((job) => {
-    let d = job['District Name'] || '';
-
-    if (!d) return;
-
-    activeDistricts[normalizeDistrictBoundaryName(d)] = true;
-  });
-
   try {
     let res = await fetch(DISTRICT_GEOJSON_URL + '?ts=' + Date.now());
     let geojson = await res.json();
 
     districtBoundaryLayer = w.L.geoJSON(geojson, {
-  interactive: true,
+      interactive: true,
 
-  style: function () {
-    return {
-      color: '#64748b',
-      weight: 1,
-      opacity: 0.28,
-      fillColor: '#0f172a',
-      fillOpacity: 0.02
-    };
-  },
+      style: function () {
+        return {
+          color: '#64748b',
+          weight: 0.8,
+          opacity: 0.28,
+          fillColor: '#0f172a',
+          fillOpacity: 0.01
+        };
+      },
 
-  onEachFeature: function (feature, layer) {
-    let districtName = getDistrictNameFromFeature(feature);
+      onEachFeature: function (feature, layer) {
+        let districtName = getDistrictNameFromFeature(feature);
 
-    if (districtName) {
-      layer.bindTooltip(districtName, {
-        sticky: true
-      });
-    }
-  }
-}).addTo(aiMap);
+        if (districtName) {
+          layer.bindTooltip(districtName, {
+            sticky: true
+          });
+        }
+      }
+    }).addTo(aiMap);
 
-districtBoundaryLayer.bringToBack();
+    districtBoundaryLayer.bringToBack();
 
-    console.log('DISTRICT BOUNDARY READY');
+    console.log('DISTRICT BOUNDARY READY:', {
+      count: geojson.features ? geojson.features.length : 0
+    });
   } catch (err) {
     console.warn('โหลด District GeoJSON ไม่สำเร็จ:', err);
   }
