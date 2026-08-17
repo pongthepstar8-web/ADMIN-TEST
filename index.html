@@ -4302,30 +4302,30 @@ async function renderDistrictBoundaries() {
     let geojson = await res.json();
 
     districtBoundaryLayer = w.L.geoJSON(geojson, {
-      style: function (feature) {
-        let districtName = getDistrictNameFromFeature(feature);
-        let norm = normalizeDistrictBoundaryName(districtName);
-        let isActive = !!activeDistricts[norm];
+  interactive: true,
 
-        return {
-          color: isActive ? '#facc15' : '#64748b',
-          weight: isActive ? 3 : 1,
-          opacity: isActive ? 0.95 : 0.18,
-          fillColor: isActive ? '#facc15' : '#0f172a',
-          fillOpacity: isActive ? 0.08 : 0.01
-        };
-      },
+  style: function () {
+    return {
+      color: '#64748b',
+      weight: 1,
+      opacity: 0.28,
+      fillColor: '#0f172a',
+      fillOpacity: 0.02
+    };
+  },
 
-      onEachFeature: function (feature, layer) {
-        let districtName = getDistrictNameFromFeature(feature);
+  onEachFeature: function (feature, layer) {
+    let districtName = getDistrictNameFromFeature(feature);
 
-        if (districtName) {
-          layer.bindTooltip(districtName, {
-            sticky: true
-          });
-        }
-      }
-    }).addTo(aiMap);
+    if (districtName) {
+      layer.bindTooltip(districtName, {
+        sticky: true
+      });
+    }
+  }
+}).addTo(aiMap);
+
+districtBoundaryLayer.bringToBack();
 
     console.log('DISTRICT BOUNDARY READY');
   } catch (err) {
