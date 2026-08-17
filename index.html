@@ -4339,12 +4339,14 @@ async function renderDistrictBoundaries() {
           );
 
           w.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap',
-          }).addTo(aiMap);
-          renderSelectedProvinceBoundary();
+  maxZoom: 19,
+  attribution: '© OpenStreetMap',
+}).addTo(aiMap);
 
-          buildAIMapMarkers().then(() => {
+// ปิดไว้ก่อนระหว่างทดสอบเส้นเขตอำเภอ
+// renderSelectedProvinceBoundary();
+
+buildAIMapMarkers().then(() => {
   renderDistrictBoundaries();
 
   buildOnsiteEngineerSelect();
