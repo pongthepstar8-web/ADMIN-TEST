@@ -4309,38 +4309,26 @@ async function renderDistrictBoundaries() {
     pane.style.pointerEvents = 'none';
 
     districtBoundaryLayer = w.L.geoJSON(geojson, {
-      pane: 'districtBoundaryPane',
-      interactive: false,
+  pane: 'districtBoundaryPane',
+  interactive: false,
 
-      style: function () {
-  return {
-    color: '#64748b',
-    weight: 0.7,
-    opacity: 0.28,
-    fillColor: '#0f172a',
-    fillOpacity: 0
-  };
-}
-    }).addTo(aiMap);
+  style: function () {
+    return {
+      color: '#64748b',
+      weight: 0.7,
+      opacity: 0.28,
+      fillColor: '#0f172a',
+      fillOpacity: 0
+    };
+  }
+}).addTo(aiMap);
 
-    districtBoundaryLayer.eachLayer(function (layer) {
-      if (layer.setStyle) {
-        layer.setStyle({
-          color: '#94a3b8',
-          weight: 0.45,
-          opacity: 0.16,
-          fillOpacity: 0
-        });
-      }
-
-      if (layer._path) {
-        layer._path.style.stroke = '#94a3b8';
-        layer._path.style.strokeWidth = '0.45';
-        layer._path.style.strokeOpacity = '0.16';
-        layer._path.style.fillOpacity = '0';
-        layer._path.style.outline = 'none';
-      }
-    });
+districtBoundaryLayer.setStyle({
+  color: '#64748b',
+  weight: 0.7,
+  opacity: 0.28,
+  fillOpacity: 0
+});
 
     console.log('DISTRICT BOUNDARY READY:', {
       count: geojson.features ? geojson.features.length : 0
