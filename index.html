@@ -6400,7 +6400,8 @@ w.scanNearbyJobs = async function () {
 
   candidates.sort((a, b) => a.dist - b.dist);
 
-  let topJobs = candidates.slice(0, 5);
+  let nearbyGroups = groupNearbyJobsByLocation(candidates);
+let topJobs = nearbyGroups.slice(0, 5);
 
   if (!topJobs.length) {
     clearNearbyJobHighlights();
