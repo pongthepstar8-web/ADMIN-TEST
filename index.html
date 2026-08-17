@@ -5589,6 +5589,28 @@ if (!w.__engineerRouteDropdownOutsideClickBound) {
   w.__engineerRouteDropdownOutsideClickBound = true;
 }
 
+function isMatchTopSearchProvinceGroup(provinceName) {
+  let searchKey = String($('#search').val() || '')
+    .toLowerCase()
+    .trim();
+
+  if (!searchKey) {
+    return true;
+  }
+
+  let groupKeys = TOP_SEARCH_GROUP_MAP[searchKey];
+
+  if (!groupKeys) {
+    return true;
+  }
+
+  let provinceCode = String(PROV_CODE[provinceName] || '')
+    .toLowerCase()
+    .trim();
+
+  return groupKeys.includes(provinceCode);
+}
+
 function buildOnsiteEngineerSelect() {
   let list = w.document.getElementById('onsiteEngineerDropdownList');
   let labelEl = w.document.getElementById('onsiteEngineerDropdownLabel');
@@ -5604,9 +5626,10 @@ function buildOnsiteEngineerSelect() {
       let province = job['Province Name'] || '';
 
       return (
-        assign &&
-        isOnsiteStatus(status) &&
-        isMatchSelectedProvince(province)
+  assign &&
+  isOnsiteStatus(status) &&
+  isMatchSelectedProvince(province) &&
+  isMatchTopSearchProvinceGroup
       );
     })
     .sort((a, b) => {
@@ -5634,9 +5657,12 @@ function buildOnsiteEngineerSelect() {
 
     if (!item || !item.assign) return;
 
-    if (!isMatchSelectedProvince(item.province)) {
-      return;
-    }
+    if (
+  !isMatchSelectedProvince(item.province) ||
+  !isMatchTopSearchProvinceGroup(item.province)
+) {
+  return;
+}
 
     let assign = String(item.assign || '').trim();
     let normKey = assign.toLowerCase();
