@@ -4295,14 +4295,14 @@ async function renderDistrictBoundaries() {
   interactive: true,
 
   style: function () {
-    return {
-      color: '#94a3b8',
-      weight: 0.5,
-      opacity: 0.18,
-      fillColor: '#0f172a',
-      fillOpacity: 0
-    };
-  },
+  return {
+    color: '#94a3b8',
+    weight: 0.5,
+    opacity: 0.18,
+    fillColor: '#0f172a',
+    fillOpacity: 0
+  };
+},
 
   onEachFeature: function (feature, layer) {
     let districtName = getDistrictNameFromFeature(feature);
