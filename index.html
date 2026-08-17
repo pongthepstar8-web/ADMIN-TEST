@@ -6216,6 +6216,29 @@ function clearNearbyJobHighlights() {
   nearbyJobLines = [];
 }
 
+function offsetNearbyJobMarkerCoord(coord, index, total) {
+  if (!coord || coord.length !== 2) return coord;
+
+  let lat = Number(coord[0]);
+  let lng = Number(coord[1]);
+
+  if (isNaN(lat) || isNaN(lng)) return coord;
+
+  let radiusMeters = 45;
+  let angle = (2 * Math.PI * index) / Math.max(total, 1);
+
+  let earth = 6378137;
+
+  let dLat = (radiusMeters * Math.cos(angle)) / earth;
+  let dLng =
+    (radiusMeters * Math.sin(angle)) /
+    (earth * Math.cos((Math.PI * lat) / 180));
+
+  let newLat = lat + (dLat * 180) / Math.PI;
+  let newLng = lng + (dLng * 180) / Math.PI;
+
+  return [newLat, newLng];
+}
 
 function drawNearbyJobHighlights(engineer, topJobs) {
   if (!aiMap || !engineer || !engineer.coord || !topJobs || !topJobs.length) {
@@ -6234,13 +6257,19 @@ function drawNearbyJobHighlights(engineer, topJobs) {
 
     if (!coord) return;
 
-    bounds.push(coord);
+    let displayCoord = offsetNearbyJobMarkerCoord(
+  coord,
+  idx,
+  topJobs.length
+);
 
-    let line = w.L.polyline(
-      [
-        engineer.coord,
-        coord
-      ],
+bounds.push(displayCoord);
+
+let line = w.L.polyline(
+  [
+    engineer.coord,
+    displayCoord
+  ],
       {
         color: '#38bdf8',
         weight: 3,
@@ -6254,13 +6283,13 @@ function drawNearbyJobHighlights(engineer, topJobs) {
 
     let rank = idx + 1;
 
-    let marker = w.L.marker(coord, {
+    let marker = w.L.marker(displayCoord, {
       icon: w.L.divIcon({
         className: '',
         html: `
           <div style="
-            width:32px;
-            height:32px;
+          width:30px;
+          height:30px;
             border-radius:50%;
             background:#7c3aed;
             color:white;
@@ -6268,7 +6297,7 @@ function drawNearbyJobHighlights(engineer, topJobs) {
             align-items:center;
             justify-content:center;
             font-weight:900;
-            font-size:14px;
+            font-size:13px;
             border:3px solid #ffffff;
             box-shadow:0 0 14px rgba(124,58,237,.9);
             font-family:Arial;
@@ -6276,8 +6305,8 @@ function drawNearbyJobHighlights(engineer, topJobs) {
             ${rank}
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
+        iconSize: [30, 30],
+iconAnchor: [15, 15],
         popupAnchor: [0, -16]
       })
     }).addTo(aiMap);
@@ -6419,11 +6448,11 @@ w.scanNearbyJobs = async function () {
     );
 
     lines.push(
-      '   ' +
-      String(job['Job Title'] || '-').slice(0, 120)
-    );
+  '   ' +
+  String(job['Job Title'] || '-').slice(0, 80)
+);
 
-    lines.push('');
+lines.push('────────────────');
   });
 
   w.showAIOperationsNotice(
