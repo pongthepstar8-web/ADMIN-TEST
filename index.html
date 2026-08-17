@@ -6348,6 +6348,58 @@ iconAnchor: [15, 15],
   }
 }
 
+function groupNearbyJobsByLocation(candidates) {
+  let groups = [];
+
+  candidates.forEach((item) => {
+    if (!item || !item.coord) return;
+
+    let foundGroup = null;
+
+    for (const group of groups) {
+      let d = distanceKm(
+        group.coord[0],
+        group.coord[1],
+        item.coord[0],
+        item.coord[1]
+      );
+
+      if (d <= 0.05) {
+        foundGroup = group;
+        break;
+      }
+    }
+
+    if (foundGroup) {
+      foundGroup.jobs.push(item.job);
+      foundGroup.items.push(item);
+
+      if (item.dist < foundGroup.dist) {
+        foundGroup.mainJob = item.job;
+        foundGroup.dist = item.dist;
+        foundGroup.coord = item.coord;
+      }
+    } else {
+      groups.push({
+        mainJob: item.job,
+        job: item.job,
+        jobs: [item.job],
+        items: [item],
+        coord: item.coord,
+        dist: item.dist,
+        count: 1
+      });
+    }
+  });
+
+  groups.forEach((group) => {
+    group.count = group.jobs.length;
+  });
+
+  groups.sort((a, b) => a.dist - b.dist);
+
+  return groups;
+}
 
 w.scanNearbyJobs = async function () {
   if (!aiMap) return;
