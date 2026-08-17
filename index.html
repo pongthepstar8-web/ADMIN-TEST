@@ -5589,24 +5589,57 @@ if (!w.__engineerRouteDropdownOutsideClickBound) {
   w.__engineerRouteDropdownOutsideClickBound = true;
 }
 
-function isMatchTopSearchProvinceGroup(provinceName) {
-  let searchKey = String($('#search').val() || '')
+function getProvinceCodeForSearchGroup(provinceName) {
+  let raw = String(provinceName || '').trim();
+  let rawLower = raw.toLowerCase();
+
+  if (!raw) {
+    return '';
+  }
+
+  if (PROV_CODE[raw]) {
+    return String(PROV_CODE[raw] || '').toLowerCase().trim();
+  }
+
+  let foundKey = Object.keys(PROV_CODE || {}).find((k) => {
+    return String(k || '').trim().toLowerCase() === rawLower;
+  });
+
+  if (foundKey) {
+    return String(PROV_CODE[foundKey] || '').toLowerCase().trim();
+  }
+
+  return rawLower;
+}
+
+function getActiveTopSearchGroupKeys() {
+  let searchText = String($('#search').val() || '')
     .toLowerCase()
     .trim();
 
-  if (!searchKey) {
-    return true;
+  if (!searchText) {
+    return null;
   }
 
-  let groupKeys = TOP_SEARCH_GROUP_MAP[searchKey];
+  let keys = searchText.split(/\s+/).filter(Boolean);
+
+  let groupKey = keys.find((k) => TOP_SEARCH_GROUP_MAP[k]);
+
+  if (!groupKey) {
+    return null;
+  }
+
+  return TOP_SEARCH_GROUP_MAP[groupKey] || null;
+}
+
+function isMatchTopSearchProvinceGroup(provinceName) {
+  let groupKeys = getActiveTopSearchGroupKeys();
 
   if (!groupKeys) {
     return true;
   }
 
-  let provinceCode = String(PROV_CODE[provinceName] || '')
-    .toLowerCase()
-    .trim();
+  let provinceCode = getProvinceCodeForSearchGroup(provinceName);
 
   return groupKeys.includes(provinceCode);
 }
@@ -5629,8 +5662,8 @@ function buildOnsiteEngineerSelect() {
   assign &&
   isOnsiteStatus(status) &&
   isMatchSelectedProvince(province) &&
-  isMatchTopSearchProvinceGroup
-      );
+  isMatchTopSearchProvinceGroup(province)
+);
     })
     .sort((a, b) => {
       return new Date(b['Create Time'] || 0) - new Date(a['Create Time'] || 0);
@@ -5751,10 +5784,11 @@ function buildDepartedEngineerSelect() {
       let province = job['Province Name'] || '';
 
       return (
-        assign &&
-        isDepartedStatus(status) &&
-        isMatchSelectedProvince(province)
-      );
+  assign &&
+  isDepartedStatus(status) &&
+  isMatchSelectedProvince(province) &&
+  isMatchTopSearchProvinceGroup(province)
+);
     })
     .sort((a, b) => {
       return new Date(b['Create Time'] || 0) - new Date(a['Create Time'] || 0);
