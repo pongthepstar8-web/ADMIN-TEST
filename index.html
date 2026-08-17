@@ -4144,6 +4144,9 @@ let districtBoundaryLayer = null;
   engineerTravelMarkers = [],
   engineerTravelOn = false;
 
+  let nearbyJobMarkers = [];
+  let nearbyJobLines = [];
+
   w.showAIOperationsNotice = function (title, message) {
   let old = w.document.getElementById('aiOperationsNotice');
 
@@ -6198,6 +6201,107 @@ function getCurrentNearbyEngineerLocation() {
   return null;
 }
 
+function clearNearbyJobHighlights() {
+  nearbyJobMarkers.forEach((m) => {
+    aiMap.removeLayer(m);
+  });
+
+  nearbyJobLines.forEach((line) => {
+    aiMap.removeLayer(line);
+  });
+
+  nearbyJobMarkers = [];
+  nearbyJobLines = [];
+}
+
+function drawNearbyJobHighlights(engineer, topJobs) {
+  if (!aiMap || !engineer || !engineer.coord || !topJobs || !topJobs.length) {
+    return;
+  }
+
+  clearNearbyJobHighlights();
+
+  let bounds = [];
+
+  bounds.push(engineer.coord);
+
+  topJobs.forEach((item, idx) => {
+    let job = item.job;
+    let coord = item.coord;
+
+    if (!coord) return;
+
+    bounds.push(coord);
+
+    let line = w.L.polyline(
+      [
+        engineer.coord,
+        coord
+      ],
+      {
+        color: '#38bdf8',
+        weight: 3,
+        opacity: 0.65,
+        dashArray: '8,10',
+        lineCap: 'round'
+      }
+    ).addTo(aiMap);
+
+    nearbyJobLines.push(line);
+
+    let rank = idx + 1;
+
+    let marker = w.L.marker(coord, {
+      icon: w.L.divIcon({
+        className: '',
+        html: `
+          <div style="
+            width:32px;
+            height:32px;
+            border-radius:50%;
+            background:#7c3aed;
+            color:white;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-weight:900;
+            font-size:14px;
+            border:3px solid #ffffff;
+            box-shadow:0 0 14px rgba(124,58,237,.9);
+            font-family:Arial;
+          ">
+            ${rank}
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+        popupAnchor: [0, -16]
+      })
+    }).addTo(aiMap);
+
+    marker.bindPopup(`
+      <div style="color:#111;font-family:Arial;min-width:220px">
+        <b>🔎 Nearby Job #${rank}</b><br>
+        <b>${job['Job ID'] || '-'}</b><br>
+        ${item.dist.toFixed(2)} km<br>
+        Priority: ${job['Priority'] || '-'}<br>
+        Status: ${job['Status'] || '-'}<br>
+        ${job['Province Name'] || '-'} / ${job['District Name'] || '-'}<br><br>
+        ${job['Job Title'] || '-'}
+      </div>
+    `);
+
+    nearbyJobMarkers.push(marker);
+  });
+
+  if (bounds.length > 1) {
+    aiMap.fitBounds(bounds, {
+      padding: [70, 70]
+    });
+  }
+}
+
+
 w.scanNearbyJobs = async function () {
   if (!aiMap) return;
 
@@ -6258,6 +6362,7 @@ w.scanNearbyJobs = async function () {
     );
     return;
   }
+  drawNearbyJobHighlights(engineer, topJobs);
 
   let lines = [];
 
@@ -7279,6 +7384,7 @@ if (routeBtn) {
 
   clearDistanceMeasure();
   clearEngineerTravel();
+  clearNearbyJobHighlights();
 
   engineerTravelOn = false;
 
