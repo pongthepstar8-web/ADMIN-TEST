@@ -6770,10 +6770,17 @@ function findJobByIdForCoordinateSearch(value) {
 
   if (!q) return null;
 
+  let qDigits = q.replace(/[^\d]/g, '');
+
   return jobs.find((job) => {
     let jobId = String(job['Job ID'] || '').trim().toLowerCase();
+    let jobDigits = jobId.replace(/[^\d]/g, '');
 
-    return jobId === q;
+    return (
+      jobId === q ||
+      jobId.includes(q) ||
+      (qDigits && jobDigits.endsWith(qDigits))
+    );
   }) || null;
 }
 
