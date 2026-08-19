@@ -6694,14 +6694,14 @@ w.openCoordinateJobScanner = function () {
           line-height:1.5;
           margin-bottom:12px;
         ">
-          ใส่พิกัดรูปแบบ Lat,Lng<br>
-          ตัวอย่าง: 14.974321,102.083456
+        ใส่พิกัด Lat,Lng หรือเลข Job ID<br>
+ตัวอย่าง: 14.974321,102.083456 หรือ JB26-1731605
         </div>
 
         <input
           id="coordinateJobScannerInput"
           type="text"
-          placeholder="14.974321,102.083456"
+          placeholder="14.974321,102.083456 หรือ JB26-1731605"
           style="
             width:100%;
             height:42px;
@@ -6765,18 +6765,55 @@ w.openCoordinateJobScanner = function () {
   }
 };
 
+function findJobByIdForCoordinateSearch(value) {
+  let q = String(value || '').trim().toLowerCase();
+
+  if (!q) return null;
+
+  return jobs.find((job) => {
+    let jobId = String(job['Job ID'] || '').trim().toLowerCase();
+
+    return jobId === q;
+  }) || null;
+}
+
 w.runCoordinateJobScanner = async function () {
   let input = w.document.getElementById('coordinateJobScannerInput');
+  let rawValue = input ? input.value : '';
 
-  let coord = parseCoordinateInput(input ? input.value : '');
+  let coord = parseCoordinateInput(rawValue);
+  let referenceJob = null;
+  let referenceLabel = '';
+
+  if (!coord) {
+    referenceJob = findJobByIdForCoordinateSearch(rawValue);
+
+    if (referenceJob) {
+      coord = await getJobCoord(referenceJob);
+
+      if (!coord) {
+        w.showAIOperationsNotice(
+          'ไม่พบพิกัดของ Job',
+          'พบเลข Job นี้ แต่ไม่พบพิกัดสำหรับใช้ค้นหาใกล้เคียง\n\nJob ID: ' +
+            (referenceJob['Job ID'] || '-')
+        );
+        return;
+      }
+
+      referenceLabel = 'JOB: ' + (referenceJob['Job ID'] || '-');
+    }
+  } else {
+    referenceLabel = 'COORDINATE';
+  }
 
   if (!coord) {
     w.showAIOperationsNotice(
-      'พิกัดไม่ถูกต้อง',
-      'กรุณาใส่พิกัดในรูปแบบ Lat,Lng\nตัวอย่าง: 14.974321,102.083456'
+      'ข้อมูลค้นหาไม่ถูกต้อง',
+      'กรุณาใส่พิกัดรูปแบบ Lat,Lng หรือเลข Job ID\n\nตัวอย่าง:\n14.974321,102.083456\nJB26-1731605'
     );
     return;
   }
+
 
   let box = w.document.getElementById('coordinateJobScannerBox');
 
@@ -6817,11 +6854,12 @@ w.runCoordinateJobScanner = async function () {
       popupAnchor: [0, -18]
     })
   }).addTo(aiMap).bindPopup(`
-    <div style="color:#111;font-family:Arial">
-      <b>📍 Coordinate Search Point</b><br>
-      ${coord[0]}, ${coord[1]}
-    </div>
-  `);
+  <div style="color:#111;font-family:Arial">
+    <b>📍 Search Reference Point</b><br>
+    ${referenceLabel || 'COORDINATE'}<br>
+    ${coord[0]}, ${coord[1]}
+  </div>
+`);
 
   let candidates = [];
 
@@ -6881,8 +6919,19 @@ w.runCoordinateJobScanner = async function () {
 
   let lines = [];
 
+  if (referenceJob) {
+  lines.push('Job อ้างอิง: ' + (referenceJob['Job ID'] || '-'));
+  lines.push(
+    'พื้นที่: ' +
+      (referenceJob['Province Name'] || '-') +
+      ' / ' +
+      (referenceJob['District Name'] || '-')
+  );
+} else {
   lines.push('จุดค้นหา: ' + coord[0] + ', ' + coord[1]);
-  lines.push('ตำแหน่งอ้างอิง: COORDINATE');
+}
+
+lines.push('ตำแหน่งอ้างอิง: ' + (referenceLabel || 'COORDINATE'));
   lines.push('');
 
   topJobs.forEach((item, idx) => {
