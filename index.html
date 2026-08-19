@@ -6917,11 +6917,13 @@ w.runCoordinateJobScanner = async function () {
   }
 
   if (coordinateSearchMarker && aiMap.hasLayer(coordinateSearchMarker)) {
-    aiMap.removeLayer(coordinateSearchMarker);
-    coordinateSearchMarker = null;
-  }
+  aiMap.removeLayer(coordinateSearchMarker);
+  coordinateSearchMarker = null;
+}
 
-  coordinateSearchMarker = w.L.marker(coord, {
+clearNearbyJobHighlights();
+
+coordinateSearchMarker = w.L.marker(coord, {
   zIndexOffset: 12000,
   icon: w.L.divIcon({
     className: '',
@@ -6950,12 +6952,9 @@ w.runCoordinateJobScanner = async function () {
   })
 }).addTo(aiMap).bindPopup(`
   <div style="color:#111;font-family:Arial;min-width:250px">
-    <b>📍 Coordinate Search Result</b><br>
+    <b>📍 ผลการค้นหาพิกัด</b><br>
     <b>Lat,Lng</b><br>
-    ${coord[0]}, ${coord[1]}<br><br>
-
-    <b>Search Mode</b><br>
-    ${referenceLabel || 'COORDINATE'}
+    ${coord[0]}, ${coord[1]}
 
     <br><br>
 
@@ -6987,6 +6986,8 @@ setTimeout(() => {
     coordinateSearchMarker.openPopup();
   }
 }, 500);
+
+return;
 
   let candidates = [];
 
