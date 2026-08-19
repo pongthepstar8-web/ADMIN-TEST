@@ -6922,50 +6922,71 @@ w.runCoordinateJobScanner = async function () {
   }
 
   coordinateSearchMarker = w.L.marker(coord, {
-    zIndexOffset: 12000,
-    icon: w.L.divIcon({
-      className: '',
-      html: `
-        <div style="
-          width:34px;
-          height:34px;
-          border-radius:50%;
-          background:#0ea5e9;
-          color:white;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:900;
-          font-size:17px;
-          border:3px solid #ffffff;
-          box-shadow:0 0 16px rgba(14,165,233,.9);
-          font-family:Arial;
-        ">
-          📍
-        </div>
-      `,
-      iconSize: [34, 34],
-      iconAnchor: [17, 17],
-      popupAnchor: [0, -18]
-    })
-  }).addTo(aiMap).bindPopup(`
-    <div style="color:#111;font-family:Arial">
-      <b>📍 Search Reference Point</b><br>
-      ${referenceLabel}<br>
-      ${coord[0]}, ${coord[1]}
-    </div>
-  `);
+  zIndexOffset: 12000,
+  icon: w.L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width:36px;
+        height:36px;
+        border-radius:50%;
+        background:#0ea5e9;
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:900;
+        font-size:18px;
+        border:3px solid #ffffff;
+        box-shadow:0 0 18px rgba(14,165,233,.9);
+        font-family:Arial;
+      ">
+        📍
+      </div>
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18]
+  })
+}).addTo(aiMap).bindPopup(`
+  <div style="color:#111;font-family:Arial;min-width:250px">
+    <b>📍 Coordinate Search Result</b><br>
+    <b>Lat,Lng</b><br>
+    ${coord[0]}, ${coord[1]}<br><br>
 
-  aiMap.flyTo(coord, 14, {
-    animate: true,
-    duration: 0.8
-  });
+    <b>Search Mode</b><br>
+    ${referenceLabel || 'COORDINATE'}
 
-  setTimeout(() => {
-    if (coordinateSearchMarker) {
-      coordinateSearchMarker.openPopup();
-    }
-  }, 500);
+    <br><br>
+
+    <button
+      onclick="window.clearAIRoute()"
+      style="
+        background:#dc2626;
+        color:white;
+        border:none;
+        border-radius:8px;
+        padding:7px 12px;
+        font-weight:900;
+        cursor:pointer;
+        font-family:Arial;
+      "
+    >
+      🧹 Clear Route
+    </button>
+  </div>
+`);
+
+aiMap.flyTo(coord, 14, {
+  animate: true,
+  duration: 0.8
+});
+
+setTimeout(() => {
+  if (coordinateSearchMarker) {
+    coordinateSearchMarker.openPopup();
+  }
+}, 500);
 
   let candidates = [];
 
