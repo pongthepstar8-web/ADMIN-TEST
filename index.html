@@ -6795,140 +6795,137 @@ function findJobByIdForCoordinateSearch(value) {
 
 w.runCoordinateJobScanner = async function () {
   let input = w.document.getElementById('coordinateJobScannerInput');
-let rawValue = input ? input.value : '';
+  let rawValue = input ? input.value : '';
 
-let coord = parseCoordinateInput(rawValue);
-let referenceJob = null;
+  let coord = parseCoordinateInput(rawValue);
+  let referenceJob = null;
+  let referenceLabel = 'COORDINATE';
 
-if (!coord) {
-  referenceJob = findJobByIdForCoordinateSearch(rawValue);
+  if (!coord) {
+    referenceJob = findJobByIdForCoordinateSearch(rawValue);
 
-  if (referenceJob) {
-    coord = await getJobCoord(referenceJob);
+    if (referenceJob) {
+      coord = await getJobCoord(referenceJob);
 
-    if (!coord) {
-      w.showAIOperationsNotice(
-        'ไม่พบพิกัดของ Job',
-        'พบเลข Job นี้ แต่ไม่พบพิกัดสำหรับแสดงบนแผนที่\n\nJob ID: ' +
-          (referenceJob['Job ID'] || '-')
-      );
+      if (!coord) {
+        w.showAIOperationsNotice(
+          'ไม่พบพิกัดของ Job',
+          'พบเลข Job นี้ แต่ไม่พบพิกัดสำหรับแสดงบนแผนที่\n\nJob ID: ' +
+            (referenceJob['Job ID'] || '-')
+        );
+        return;
+      }
+
+      referenceLabel = 'JOB: ' + (referenceJob['Job ID'] || '-');
+
+      let box = w.document.getElementById('coordinateJobScannerBox');
+
+      if (box) {
+        box.remove();
+      }
+
+      clearNearbyJobHighlights();
+
+      if (coordinateSearchMarker && aiMap.hasLayer(coordinateSearchMarker)) {
+        aiMap.removeLayer(coordinateSearchMarker);
+        coordinateSearchMarker = null;
+      }
+
+      coordinateSearchMarker = w.L.marker(coord, {
+        zIndexOffset: 12000,
+        icon: w.L.divIcon({
+          className: '',
+          html: `
+            <div style="
+              width:36px;
+              height:36px;
+              border-radius:50%;
+              background:#dc2626;
+              color:white;
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              font-weight:900;
+              font-size:18px;
+              border:3px solid #ffffff;
+              box-shadow:0 0 18px rgba(220,38,38,.9);
+              font-family:Arial;
+            ">
+              🎯
+            </div>
+          `,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18],
+          popupAnchor: [0, -18]
+        })
+      }).addTo(aiMap).bindPopup(`
+        <div style="color:#111;font-family:Arial;min-width:250px">
+          <b>🎯 Job Search Result</b><br>
+          <b>${referenceJob['Job ID'] || '-'}</b><br>
+          Priority: ${referenceJob['Priority'] || '-'}<br>
+          Status: ${referenceJob['Status'] || '-'}<br>
+          ${referenceJob['Province Name'] || '-'} / ${referenceJob['District Name'] || '-'}<br><br>
+          ${String(referenceJob['Job Title'] || '-').slice(0, 120)}
+
+          <br><br>
+
+          <button
+            onclick="window.clearAIRoute()"
+            style="
+              background:#dc2626;
+              color:white;
+              border:none;
+              border-radius:8px;
+              padding:7px 12px;
+              font-weight:900;
+              cursor:pointer;
+              font-family:Arial;
+              margin-right:6px;
+            "
+          >
+            🧹 Clear Route
+          </button>
+
+          <button
+            onclick="window.clearCoordinateSearchMarker && window.clearCoordinateSearchMarker()"
+            style="
+              background:#334155;
+              color:white;
+              border:none;
+              border-radius:8px;
+              padding:7px 12px;
+              font-weight:900;
+              cursor:pointer;
+              font-family:Arial;
+            "
+          >
+            ✕ Close Marker
+          </button>
+        </div>
+      `);
+
+      aiMap.flyTo(coord, 14, {
+        animate: true,
+        duration: 0.8
+      });
+
+      setTimeout(() => {
+        if (coordinateSearchMarker) {
+          coordinateSearchMarker.openPopup();
+        }
+      }, 500);
+
       return;
     }
-
-    let box = w.document.getElementById('coordinateJobScannerBox');
-
-    if (box) {
-      box.remove();
-    }
-
-    clearNearbyJobHighlights();
-
-    if (coordinateSearchMarker && aiMap.hasLayer(coordinateSearchMarker)) {
-      aiMap.removeLayer(coordinateSearchMarker);
-      coordinateSearchMarker = null;
-    }
-
-    coordinateSearchMarker = w.L.marker(coord, {
-  zIndexOffset: 12000,
-  icon: w.L.divIcon({
-    className: '',
-    html: `
-      <div style="
-        width:36px;
-        height:36px;
-        border-radius:50%;
-        background:#dc2626;
-        color:white;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-weight:900;
-        font-size:18px;
-        border:3px solid #ffffff;
-        box-shadow:0 0 18px rgba(220,38,38,.9);
-        font-family:Arial;
-      ">
-        🎯
-      </div>
-    `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-    popupAnchor: [0, -18]
-  })
-}).addTo(aiMap).bindPopup(`
-  <div style="color:#111;font-family:Arial;min-width:250px">
-    <b>🎯 Job Search Result</b><br>
-    <b>${referenceJob['Job ID'] || '-'}</b><br>
-    Priority: ${referenceJob['Priority'] || '-'}<br>
-    Status: ${referenceJob['Status'] || '-'}<br>
-    ${referenceJob['Province Name'] || '-'} / ${referenceJob['District Name'] || '-'}<br><br>
-    ${String(referenceJob['Job Title'] || '-').slice(0, 120)}
-
-    <br><br>
-
-    <button
-      onclick="window.clearAIRoute()"
-      style="
-        background:#dc2626;
-        color:white;
-        border:none;
-        border-radius:8px;
-        padding:7px 12px;
-        font-weight:900;
-        cursor:pointer;
-        font-family:Arial;
-        margin-right:6px;
-      "
-    >
-      🧹 Clear Route
-    </button>
-
-    <button
-      onclick="window.clearCoordinateSearchMarker && window.clearCoordinateSearchMarker()"
-      style="
-        background:#334155;
-        color:white;
-        border:none;
-        border-radius:8px;
-        padding:7px 12px;
-        font-weight:900;
-        cursor:pointer;
-        font-family:Arial;
-      "
-    >
-      ✕ Close Marker
-    </button>
-  </div>
-`);
-
-coordinateSearchMarker.on('popupclose', function () {
-  if (w.clearAIRoute) {
-    w.clearAIRoute();
   }
-});
 
-aiMap.flyTo(coord, 14, {
-  animate: true,
-  duration: 0.8
-});
-
-setTimeout(() => {
-  if (coordinateSearchMarker) {
-    coordinateSearchMarker.openPopup();
+  if (!coord) {
+    w.showAIOperationsNotice(
+      'ข้อมูลค้นหาไม่ถูกต้อง',
+      'กรุณาใส่พิกัดรูปแบบ Lat,Lng หรือเลข Job ID\n\nตัวอย่าง:\n14.974321,102.083456\nJB26-1731605'
+    );
+    return;
   }
-}, 500);
-
-return;
-  }
-}
-
-if (!coord) {
-  w.showAIOperationsNotice(
-    'ข้อมูลค้นหาไม่ถูกต้อง',
-    'กรุณาใส่พิกัดรูปแบบ Lat,Lng หรือเลข Job ID\n\nตัวอย่าง:\n14.974321,102.083456\nJB26-1731605'
-  );
-  return;
-}
 
   let box = w.document.getElementById('coordinateJobScannerBox');
 
@@ -6969,23 +6966,23 @@ if (!coord) {
       popupAnchor: [0, -18]
     })
   }).addTo(aiMap).bindPopup(`
-  <div style="color:#111;font-family:Arial">
-    <b>📍 Search Reference Point</b><br>
-    ${referenceLabel || 'COORDINATE'}<br>
-    ${coord[0]}, ${coord[1]}
-  </div>
-`);
+    <div style="color:#111;font-family:Arial">
+      <b>📍 Search Reference Point</b><br>
+      ${referenceLabel}<br>
+      ${coord[0]}, ${coord[1]}
+    </div>
+  `);
 
-aiMap.flyTo(coord, 14, {
-animate: true,
-duration: 0.8
-});
-setTimeout(() => {
-if (coordinateSearchMarker) {
-coordinateSearchMarker.openPopup();
-}
-}, 500);​‌
+  aiMap.flyTo(coord, 14, {
+    animate: true,
+    duration: 0.8
+  });
 
+  setTimeout(() => {
+    if (coordinateSearchMarker) {
+      coordinateSearchMarker.openPopup();
+    }
+  }, 500);
 
   let candidates = [];
 
@@ -7045,19 +7042,8 @@ coordinateSearchMarker.openPopup();
 
   let lines = [];
 
-  if (referenceJob) {
-  lines.push('Job อ้างอิง: ' + (referenceJob['Job ID'] || '-'));
-  lines.push(
-    'พื้นที่: ' +
-      (referenceJob['Province Name'] || '-') +
-      ' / ' +
-      (referenceJob['District Name'] || '-')
-  );
-} else {
   lines.push('จุดค้นหา: ' + coord[0] + ', ' + coord[1]);
-}
-
-lines.push('ตำแหน่งอ้างอิง: ' + (referenceLabel || 'COORDINATE'));
+  lines.push('ตำแหน่งอ้างอิง: COORDINATE');
   lines.push('');
 
   topJobs.forEach((item, idx) => {
