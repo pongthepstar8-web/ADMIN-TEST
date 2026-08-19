@@ -2975,6 +2975,25 @@ jobs.forEach((r) => {
 
       <style>
 
+        .nearby-flow-line {
+  stroke-dasharray: 10 18;
+  animation: nearbyFlowMove 0.9s linear infinite;
+}
+
+.nearby-glow-line {
+  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.9));
+}
+
+@keyframes nearbyFlowMove {
+  from {
+    stroke-dashoffset: 28;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
         .map-select {
   height: 46px;
   min-width: 300px;
@@ -4130,11 +4149,11 @@ Object.entries(engineers)
 
     <div class="map-tools-menu" id="mapToolsMenu">
   <button class="map-tools-item" onclick="window.scanNearbyJobs()">
-    🔎 Scan Nearby Jobs
+    📍 Scan Nearby Jobs
   </button>
 
   <button class="map-tools-item" onclick="window.openCoordinateJobScanner()">
-    📍 Search by Coordinate
+    🔎 Search by Coordinate
   </button>
 
   <button class="map-tools-item" onclick="window.openGoogleRoute()">
@@ -6353,23 +6372,48 @@ if (!aiMap.getPane('nearbyJobLinePane')) {
   aiMap.getPane('nearbyJobLinePane').style.zIndex = 430;
 }
 
-  let line = w.L.polyline(
-    [
-      engineer.coord,
-      displayCoord
-    ],
-    {
-      pane: 'nearbyJobLinePane',
-      color: '#38bdf8',
-      weight: 2,
-      opacity: 0.45,
-      dashArray: '6,12',
-      lineCap: 'round',
-      nearbyJobLayer: true
-    }
-  ).addTo(aiMap);
+if (!aiMap.getPane('nearbyJobLinePane')) {
+  aiMap.createPane('nearbyJobLinePane');
+  aiMap.getPane('nearbyJobLinePane').style.zIndex = 430;
+}
 
-  nearbyJobLines.push(line);
+let baseLine = w.L.polyline(
+  [
+    engineer.coord,
+    displayCoord
+  ],
+  {
+    pane: 'nearbyJobLinePane',
+    color: '#0284c7',
+    weight: 7,
+    opacity: 0.45,
+    lineCap: 'round',
+    lineJoin: 'round',
+    className: 'nearby-glow-line',
+    nearbyJobLayer: true
+  }
+).addTo(aiMap);
+
+let flowLine = w.L.polyline(
+  [
+    engineer.coord,
+    displayCoord
+  ],
+  {
+    pane: 'nearbyJobLinePane',
+    color: '#e0f2fe',
+    weight: 3,
+    opacity: 1,
+    dashArray: '10,18',
+    lineCap: 'round',
+    lineJoin: 'round',
+    className: 'nearby-flow-line',
+    nearbyJobLayer: true
+  }
+).addTo(aiMap);
+
+nearbyJobLines.push(baseLine);
+nearbyJobLines.push(flowLine);
 
   if (!aiMap.getPane('nearbyJobMarkerPane')) {
   aiMap.createPane('nearbyJobMarkerPane');
