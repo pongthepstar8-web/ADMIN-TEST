@@ -6907,8 +6907,16 @@ coordinateSearchMarker.on('popupclose', function () {
   }
 });
 
-aiMap.setView(coord, 14);
-coordinateSearchMarker.openPopup();
+aiMap.flyTo(coord, 14, {
+  animate: true,
+  duration: 0.8
+});
+
+setTimeout(() => {
+  if (coordinateSearchMarker) {
+    coordinateSearchMarker.openPopup();
+  }
+}, 500);
 
 return;
   }
@@ -6921,8 +6929,6 @@ if (!coord) {
   );
   return;
 }
-
-
 
   let box = w.document.getElementById('coordinateJobScannerBox');
 
