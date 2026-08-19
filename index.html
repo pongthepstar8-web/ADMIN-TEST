@@ -6813,47 +6813,53 @@ if (!coord) {
     }
 
     coordinateSearchMarker = w.L.marker(coord, {
-      zIndexOffset: 12000,
-      icon: w.L.divIcon({
-        className: '',
-        html: `
-          <div style="
-            width:36px;
-            height:36px;
-            border-radius:50%;
-            background:#dc2626;
-            color:white;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-weight:900;
-            font-size:18px;
-            border:3px solid #ffffff;
-            box-shadow:0 0 18px rgba(220,38,38,.9);
-            font-family:Arial;
-          ">
-            🎯
-          </div>
-        `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-        popupAnchor: [0, -18]
-      })
-    }).addTo(aiMap).bindPopup(`
-      <div style="color:#111;font-family:Arial;min-width:230px">
-        <b>🎯 Job Search Result</b><br>
-        <b>${referenceJob['Job ID'] || '-'}</b><br>
-        Priority: ${referenceJob['Priority'] || '-'}<br>
-        Status: ${referenceJob['Status'] || '-'}<br>
-        ${referenceJob['Province Name'] || '-'} / ${referenceJob['District Name'] || '-'}<br><br>
-        ${String(referenceJob['Job Title'] || '-').slice(0, 120)}
+  zIndexOffset: 12000,
+  icon: w.L.divIcon({
+    className: '',
+    html: `
+      <div style="
+        width:36px;
+        height:36px;
+        border-radius:50%;
+        background:#dc2626;
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-weight:900;
+        font-size:18px;
+        border:3px solid #ffffff;
+        box-shadow:0 0 18px rgba(220,38,38,.9);
+        font-family:Arial;
+      ">
+        🎯
       </div>
-    `);
+    `,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18],
+    popupAnchor: [0, -18]
+  })
+}).addTo(aiMap).bindPopup(`
+  <div style="color:#111;font-family:Arial;min-width:230px">
+    <b>🎯 Job Search Result</b><br>
+    <b>${referenceJob['Job ID'] || '-'}</b><br>
+    Priority: ${referenceJob['Priority'] || '-'}<br>
+    Status: ${referenceJob['Status'] || '-'}<br>
+    ${referenceJob['Province Name'] || '-'} / ${referenceJob['District Name'] || '-'}<br><br>
+    ${String(referenceJob['Job Title'] || '-').slice(0, 120)}
+  </div>
+`);
 
-    aiMap.setView(coord, 14);
-    coordinateSearchMarker.openPopup();
+coordinateSearchMarker.on('popupclose', function () {
+  if (w.clearAIRoute) {
+    w.clearAIRoute();
+  }
+});
 
-    return;
+aiMap.setView(coord, 14);
+coordinateSearchMarker.openPopup();
+
+return;
   }
 }
 
