@@ -4129,41 +4129,42 @@ Object.entries(engineers)
     </button>
 
     <div class="map-tools-menu" id="mapToolsMenu">
-      <button class="map-tools-item" onclick="window.openGoogleRoute()">
-        🧭 Open Google Maps
-      </button>
+  <button class="map-tools-item" onclick="window.scanNearbyJobs()">
+    🔎 Scan Nearby Jobs
+  </button>
 
-      <button class="map-tools-item" onclick="window.openCoordinateJobScanner()">
-  📍 Search by Coordinate
-</button>
+  <button class="map-tools-item" onclick="window.openCoordinateJobScanner()">
+    📍 Search by Coordinate
+  </button>
 
-      <button class="map-tools-item" onclick="window.clearAIRoute()">
-        🧹 Clear Route
-      </button>
+  <button class="map-tools-item" onclick="window.openGoogleRoute()">
+    🧭 Open Google Maps
+  </button>
 
-      <button class="map-tools-item" onclick="window.scanNearbyJobs()">
-  🔎 Scan Nearby Jobs
-</button>
+  <button class="map-tools-item" onclick="window.fitAllMarkers()">
+    📍 Fit All Jobs
+  </button>
 
-      <button class="map-tools-item" onclick="window.fitAllMarkers()">
-        📍 Fit All Jobs
-      </button>
+  <button
+    id="districtSourceBtn"
+    class="map-tools-item"
+    onclick="window.showDistrictSourceJobs()"
+  >
+    🗺️ District Source (0)
+  </button>
 
-      <button
-  id="districtSourceBtn"
-  class="map-tools-item"
-  onclick="window.showDistrictSourceJobs()"
->
-  🗺️ District Source (0)
-</button>
-      <button
-  id="clearTravelLogBtn"
-  class="map-tools-item"
-  onclick="window.clearTravelLogAdmin()"
->
-  🧹 Clear Travel Log
-</button>
-    </div>
+  <button class="map-tools-item" onclick="window.clearAIRoute()">
+    🧹 Clear Route
+  </button>
+
+  <button
+    id="clearTravelLogBtn"
+    class="map-tools-item"
+    onclick="window.clearTravelLogAdmin()"
+  >
+    🧹 Clear Travel Log
+  </button>
+</div>
   </div>
 </div><div id="aiMap"></div></div><script>window.AI_JOBS=${safeJobsJson};<\/script></body></html>`;
   w.document.open();
