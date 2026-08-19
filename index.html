@@ -6813,117 +6813,66 @@ w.runCoordinateJobScanner = async function () {
   let topJobs = nearbyGroups.slice(0, 5);
 
   if (!topJobs.length) {
-    clearNearbyJobHighlights
-
-w.scanNearbyJobs = async function () {
-  if (!aiMap) return;
-
-  let engineer = getCurrentNearbyEngineerLocation();
-
-  if (!engineer) {
-    w.showAIOperationsNotice(
-      'ยังไม่ได้เลือกช่าง',
-      'กรุณาเลือกช่างจาก Departed ล่าสุด หรือ On-site ปัจจุบัน / ล่าสุด ก่อนใช้งาน Scan Nearby Jobs'
-    );
-    return;
-  }
-
-  let candidates = [];
-
-  for (const job of jobs) {
-    let status = String(job['Status'] || '').toLowerCase();
-
-    if (status.includes('done') || status.includes('cancel')) {
-      continue;
-    }
-
-    if (
-      engineer.jobId &&
-      String(job['Job ID'] || '') === String(engineer.jobId)
-    ) {
-      continue;
-    }
-
-    let coord = await getJobCoord(job);
-
-    if (!coord) {
-      continue;
-    }
-
-    let dist = distanceKm(
-      engineer.coord[0],
-      engineer.coord[1],
-      coord[0],
-      coord[1]
-    );
-
-    candidates.push({
-      job: job,
-      coord: coord,
-      dist: dist
-    });
-  }
-
-  candidates.sort((a, b) => a.dist - b.dist);
-
-  let nearbyGroups = groupNearbyJobsByLocation(candidates);
-let topJobs = nearbyGroups.slice(0, 5);
-
-  if (!topJobs.length) {
     clearNearbyJobHighlights();
 
-    currentNearbyEngineer = null;
-    currentNearbyJobs = [];
-
     w.showAIOperationsNotice(
-      'ไม่พบ Nearby Jobs',
-      'ไม่พบงานที่ยังเปิดอยู่ใกล้ตำแหน่งล่าสุดของช่างคนนี้'
+      'ไม่พบ Job ใกล้พิกัด',
+      'ไม่พบงานที่ยังเปิดอยู่ใกล้พิกัดนี้'
     );
     return;
   }
 
-  currentNearbyEngineer = engineer;
+  let pseudoEngineer = {
+    name: 'Coordinate Search',
+    source: 'COORDINATE',
+    coord: coord,
+    jobId: ''
+  };
+
+  currentNearbyEngineer = pseudoEngineer;
   currentNearbyJobs = topJobs;
 
   drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
 
   let lines = [];
 
-  lines.push('ช่าง: ' + (engineer.name || '-'));
-  lines.push('ตำแหน่งอ้างอิง: ' + engineer.source);
+  lines.push('จุดค้นหา: ' + coord[0] + ', ' + coord[1]);
+  lines.push('ตำแหน่งอ้างอิง: COORDINATE');
   lines.push('');
 
   topJobs.forEach((item, idx) => {
-    let job = item.job;
+    let mainJob = item.mainJob || item.job || {};
+    let jobCount = item.count || (item.jobs ? item.jobs.length : 1);
 
     lines.push(
       (idx + 1) + '. ' +
-      (job['Job ID'] || '-') +
+      (mainJob['Job ID'] || '-') +
       ' | ' +
       item.dist.toFixed(2) + ' km' +
       ' | ' +
-      (job['Priority'] || '-') +
+      (mainJob['Priority'] || '-') +
       ' | ' +
-      (job['Status'] || '-')
+      (mainJob['Status'] || '-') +
+      (jobCount > 1 ? ' | ' + jobCount + ' Jobs' : '')
     );
 
     lines.push(
       '   ' +
-      (job['Province Name'] || '-') +
+      (mainJob['Province Name'] || '-') +
       ' / ' +
-      (job['District Name'] || '-')
+      (mainJob['District Name'] || '-')
     );
 
     lines.push(
-  '   ' +
-  String(job['Job Title'] || '-').slice(0, 80)
-);
+      '   ' +
+      String(mainJob['Job Title'] || '-').slice(0, 90)
+    );
 
-lines.push('────────────────');
+    lines.push('────────────────');
   });
 
   w.showAIOperationsNotice(
-    'Scan Nearby Jobs',
+    'Search by Coordinate',
     lines.join('\n')
   );
 };
