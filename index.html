@@ -8098,23 +8098,6 @@ async function getJobCoord(job) {
     return [gps.lat, gps.lng];
   }
 
-  // 1. ค้นหารหัสหรือชื่อ INF / IPV / BIPV / INL ก่อน
-  let specialCoord = findSpecialSiteCoordFromTitle(title);
-
-  if (specialCoord) {
-    console.log('SPECIAL SITE COORD FOUND:', {
-      jobId: job['Job ID'] || '',
-      type: specialCoord.type,
-      key: specialCoord.key,
-      matchedBy: specialCoord.matchedBy,
-      matchedValue: specialCoord.matchedValue,
-      lat: specialCoord.lat,
-      lng: specialCoord.lng
-    });
-
-    return [specialCoord.lat, specialCoord.lng];
-  }
-
   // 2. ถ้าไม่พบชื่อหรือรหัสพิเศษ ให้ใช้ Site code เช่น 454_095
   let specialCoord = findSpecialSiteCoordFromTitle(title);
 let siteCoord = null;
