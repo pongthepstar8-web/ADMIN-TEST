@@ -5356,6 +5356,13 @@ return {
       return '📍 Source: GPS in Title';
     }
 
+    if (group.source === 'SPECIAL_SITE') {
+  return (
+    '🏢 Source: INF / IPV / BIPV / INL' +
+    (group.siteName ? ' - ' + escapeHtml(group.siteName) : '')
+  );
+}
+
     if (group.source === 'SITE_SHEET') {
       return (
         '📡 Source: OLT / ME / MME Sheet' +
@@ -5402,11 +5409,13 @@ let gmapUrl =
       let district = job['District Name'] || '-';
 
       let coordSource =
-        group.source === 'GPS_TITLE'
-          ? '📍 GPS from Title'
-          : group.source === 'SITE_SHEET'
-          ? '📡 Site Coordinate'
-          : '🗺️ Area Coordinate';
+  group.source === 'GPS_TITLE'
+    ? '📍 GPS from Title'
+    : group.source === 'SPECIAL_SITE'
+    ? `🏢 ${group.siteName || 'INF / IPV / BIPV / INL'} Coordinate`
+    : group.source === 'SITE_SHEET'
+    ? '📡 Site Coordinate'
+    : '🗺️ Area Coordinate';
 
       return `
         <details class="map-job-box">
@@ -8107,11 +8116,22 @@ async function getJobCoord(job) {
   }
 
   // 2. ถ้าไม่พบชื่อหรือรหัสพิเศษ ให้ใช้ Site code เช่น 454_095
-  let siteCoord = findSiteCoordFromTitle(title);
+  let specialCoord = findSpecialSiteCoordFromTitle(title);
+let siteCoord = null;
+
+if (specialCoord) {
+  coord = [specialCoord.lat, specialCoord.lng];
+  source = 'SPECIAL_SITE';
+  siteName = specialCoord.key;
+} else {
+  siteCoord = findSiteCoordFromTitle(title);
 
   if (siteCoord) {
-    return [siteCoord.lat, siteCoord.lng];
+    coord = [siteCoord.lat, siteCoord.lng];
+    source = 'SITE_SHEET';
+    siteName = siteCoord.key;
   }
+}
 
   // 3. ถ้ายังไม่พบ ให้ใช้ District Coordinate
   let province = job['Province Name'] || '';
