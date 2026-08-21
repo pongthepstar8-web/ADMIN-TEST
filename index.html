@@ -1591,59 +1591,59 @@ function extractSpecialSiteCodeFromTitle(title) {
     /\b(?:BINF|BIPV|BINL|INF|IPV|INL)[A-Z0-9_-]*\b/i
   );
 
-  return matc* ? match[0].trim() : '';
+  return match ? match[0].trim() : '';
 }
 
-functi*n findSpecialSiteCoordFromTitle(ti*le) {
-  let text = String(title ||*'').trim();
+function findSpecialSiteCoordFromTitle(title) {
+  let text = String(title || '').trim();
 
   if (!text) {
-    re*urn null;
+    return null;
   }
 
-  let specialCode =*extractSpecialSiteCodeFromTitle(te*t);
+  let specialCode = extractSpecialSiteCodeFromTitle(text);
 
   if (specialCode) {
-    let *odeKey = normalizeSpecialSiteKey(s*ecialCode);
-    let codeItem = SPE*IAL_SITE_COORD_INDEX[codeKey];
+    let codeKey = normalizeSpecialSiteKey(specialCode);
+    let codeItem = SPECIAL_SITE_COORD_INDEX[codeKey];
 
-  * if (codeItem) {
+    if (codeItem) {
       return {
-  *     lat: Number(codeItem.lat),
-  *     lng: Number(codeItem.lng),
-  *     key: codeItem.key,
-        ty*e: codeItem.type,
-        address:*codeItem.address,
-        matchedB*: 'SPECIAL_CODE',
-        matchedV*lue: specialCode
+        lat: Number(codeItem.lat),
+        lng: Number(codeItem.lng),
+        key: codeItem.key,
+        type: codeItem.type,
+        address: codeItem.address,
+        matchedBy: 'SPECIAL_CODE',
+        matchedValue: specialCode
       };
     }
-  *
+  }
 
-  let normalizedTitle = normaliz*SpecialSiteKey(text);
+  let normalizedTitle = normalizeSpecialSiteKey(text);
 
-  let match*dKey = Object.keys(SPECIAL_SITE_CO*RD_INDEX).find((key) => {
-    if (*key || key.length < 6) {
-      ret*rn false;
+  let matchedKey = Object.keys(SPECIAL_SITE_COORD_INDEX).find((key) => {
+    if (!key || key.length < 6) {
+      return false;
     }
 
-    return normal*zedTitle.includes(key);
+    return normalizedTitle.includes(key);
   });
 
-  i* (!matchedKey) {
+  if (!matchedKey) {
     return null;
-* }
+  }
 
-  let matchedItem = SPECIAL_SI*E_COORD_INDEX[matchedKey];
+  let matchedItem = SPECIAL_SITE_COORD_INDEX[matchedKey];
 
-  retu*n {
-    lat: Number(matchedItem.la*),
-    lng: Number(matchedItem.lng*,
+  return {
+    lat: Number(matchedItem.lat),
+    lng: Number(matchedItem.lng),
     key: matchedItem.key,
-    ty*e: matchedItem.type,
-    address: *atchedItem.address,
-    matchedBy:*matchedItem.matchSource || 'SPECIA*_NAME',
-    matchedValue: matchedI*em.key
+    type: matchedItem.type,
+    address: matchedItem.address,
+    matchedBy: matchedItem.matchSource || 'SPECIAL_NAME',
+    matchedValue: matchedItem.key
   };
 }
 
