@@ -6057,7 +6057,13 @@ function updateDistrictSourceButton() {
 
             let gps = extractGPS(title);
 
-let siteCoord = !gps ? findSiteCoordFromTitle(title) : null;
+let specialCoord = !gps
+  ? findSpecialSiteCoordFromTitle(title)
+  : null;
+
+let siteCoord = !gps && !specialCoord
+  ? findSiteCoordFromTitle(title)
+  : null;
 
 let key = '';
 let source = 'AREA_COORD';
@@ -6066,6 +6072,10 @@ let siteName = '';
 if (gps) {
   key = `GPS|${lat.toFixed(5)}|${lng.toFixed(5)}`;
   source = 'GPS_TITLE';
+} else if (specialCoord) {
+  key = `SPECIAL|${specialCoord.key}`;
+  source = 'SPECIAL_SITE';
+  siteName = specialCoord.key;
 } else if (siteCoord) {
   key = `SITE|${siteCoord.key}`;
   source = 'SITE_SHEET';
@@ -6077,14 +6087,15 @@ if (gps) {
 
 if (!groups[key]) {
   groups[key] = {
-    lat,
-    lng,
+    lat: lat,
+    lng: lng,
     jobs: [],
     source: source,
     siteName: siteName
   };
 }
-            groups[key].jobs.push(job);
+
+groups[key].jobs.push(job);
           }
 
           let groupList = Object.values(groups);
@@ -7981,6 +7992,7 @@ function debugFindSite(title, code) {
     siteCoordItem: SITE_COORD[code]
   });
 }
+
 function findSiteCoordFromTitle(title) {
   if (!title || !SITE_COORD) {
     return null;
