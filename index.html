@@ -8098,22 +8098,28 @@ async function getJobCoord(job) {
     return [gps.lat, gps.lng];
   }
 
-  // 2. ถ้าไม่พบชื่อหรือรหัสพิเศษ ให้ใช้ Site code เช่น 454_095
-  let specialCoord = findSpecialSiteCoordFromTitle(title);
-let siteCoord = null;
+  // 1. ค้นหารหัสหรือชื่อ INF / IPV / BIPV / INL ก่อน
+let specialCoord = findSpecialSiteCoordFromTitle(title);
 
 if (specialCoord) {
-  coord = [specialCoord.lat, specialCoord.lng];
-  source = 'SPECIAL_SITE';
-  siteName = specialCoord.key;
-} else {
-  siteCoord = findSiteCoordFromTitle(title);
+  console.log('SPECIAL SITE COORD FOUND:', {
+    jobId: job['Job ID'] || '',
+    type: specialCoord.type,
+    key: specialCoord.key,
+    matchedBy: specialCoord.matchedBy,
+    matchedValue: specialCoord.matchedValue,
+    lat: specialCoord.lat,
+    lng: specialCoord.lng
+  });
 
-  if (siteCoord) {
-    coord = [siteCoord.lat, siteCoord.lng];
-    source = 'SITE_SHEET';
-    siteName = siteCoord.key;
-  }
+  return [specialCoord.lat, specialCoord.lng];
+}
+
+// 2. ถ้าไม่พบชื่อหรือรหัสพิเศษ ให้ใช้ Site code เช่น 454_095
+let siteCoord = findSiteCoordFromTitle(title);
+
+if (siteCoord) {
+  return [siteCoord.lat, siteCoord.lng];
 }
 
   // 3. ถ้ายังไม่พบ ให้ใช้ District Coordinate
