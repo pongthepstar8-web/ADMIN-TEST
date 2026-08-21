@@ -1584,6 +1584,16 @@ function buildSiteCoordIndex() {
   );
 }
 
+console.log('CHECK BINF3750012 INDEX:', {
+  siteCoord: SITE_COORD['BINF3750012'],
+  normalKey: normalizeSpecialSiteKey('BINF3750012'),
+  specialCoord:
+    SPECIAL_SITE_COORD_INDEX[
+      normalizeSpecialSiteKey('BINF3750012')
+    ],
+  specialCount: Object.keys(SPECIAL_SITE_COORD_INDEX || {}).length
+});
+
 function extractSpecialSiteCodeFromTitle(title) {
   let text = String(title || '');
 
