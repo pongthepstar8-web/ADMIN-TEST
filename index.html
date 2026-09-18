@@ -7654,6 +7654,15 @@ return;
     });
   }
 
+  console.log('SCAN ENGINEER JOBS RESULT:', {
+  engineerName: engineer.name,
+  engineerKey: engineerKey,
+  matchedJobs: candidates.length,
+  matchedJobIds: candidates.map((item) => {
+    return item.job['Job ID'] || '';
+  })
+});
+
   candidates.sort((a, b) => a.dist - b.dist);
 
   let nearbyGroups = groupNearbyJobsByLocation(candidates);
@@ -7858,9 +7867,18 @@ w.scanEngineerJobs = async function () {
   }
 
 
-  let engineerKey = normalizeEngineerName(
-    engineer.name || w.currentNearbyEngineerName || ''
-  );
+  let engineerKey = String(
+  w.currentNearbyEngineerKey ||
+  normalizeEngineerName(
+    engineer.name ||
+    w.currentNearbyEngineerName ||
+    ''
+  )
+)
+  .toLowerCase()
+  .replace(/\s+/g, '')
+  .trim();
+
 
 
   if (!engineerKey) {
@@ -7889,14 +7907,21 @@ w.scanEngineerJobs = async function () {
     }
 
 
-    let assignKey = normalizeEngineerName(
-      job['Assign to'] || ''
-    );
+    let assignKey = String(
+  normalizeEngineerName(job['Assign to'] || '')
+)
+  .toLowerCase()
+  .replace(/\s+/g, '')
+  .trim();
 
+let matchedEngineer =
+  assignKey === engineerKey ||
+  assignKey.includes(engineerKey) ||
+  engineerKey.includes(assignKey);
 
-    if (assignKey !== engineerKey) {
-      continue;
-    }
+if (!matchedEngineer) {
+  continue;
+}
 
 
     let coord = await getJobCoord(job);
