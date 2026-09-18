@@ -7039,8 +7039,11 @@ function clearEngineerJobScan() {
     }
   });
 
-  engineerJobScanMarkers = [];
-  engineerJobScanLines = [];
+  let engineerJobScanMarkers = [];
+let engineerJobScanLines = [];
+
+const ENGINEER_JOB_NEAR_LIMIT_KM = 20;
+const ENGINEER_JOB_MIDDLE_LIMIT_KM = 50;
 }
 
 w.clearEngineerJobScan = clearEngineerJobScan;
@@ -7835,6 +7838,7 @@ w.scanNearbyJobs = async function () {
 };
 
 w.scanEngineerJobs = async function () {
+  console.log('SCAN ENGINEER JOBS CLICKED');
   if (!aiMap) {
     return;
   }
