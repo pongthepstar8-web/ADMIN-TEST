@@ -6990,6 +6990,11 @@ function groupNearbyJobsByLocation(candidates) {
   return groups;
 }
 
+let engineerJobScanMarkers = [];
+let engineerJobScanLines = [];
+const ENGINEER_JOB_NEAR_LIMIT_KM = 20;
+const ENGINEER_JOB_MIDDLE_LIMIT_KM = 50;
+
 function getEngineerJobDistanceInfo(distanceKmValue) {
   let distance = Number(distanceKmValue);
 
@@ -7039,11 +7044,8 @@ function clearEngineerJobScan() {
     }
   });
 
-  let engineerJobScanMarkers = [];
-let engineerJobScanLines = [];
-
-const ENGINEER_JOB_NEAR_LIMIT_KM = 20;
-const ENGINEER_JOB_MIDDLE_LIMIT_KM = 50;
+    engineerJobScanMarkers = [];
+    engineerJobScanLines = [];
 }
 
 w.clearEngineerJobScan = clearEngineerJobScan;
