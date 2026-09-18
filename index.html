@@ -7247,133 +7247,6 @@ function drawEngineerJobScan(engineer, groups) {
   }
 }
 
-w.scanEngineerJobs = async function () {
-  if (!aiMap) {
-    return;
-  }
-
-  let engineer = getCurrentNearbyEngineerLocation();
-
-  if (!engineer) {
-    w.showAIOperationsNotice(
-      'ยังไม่ได้เลือกช่าง',
-      'กรุณาเลือกช่างจาก Departed ล่าสุด หรือ On-site ปัจจุบัน / ล่าสุด ก่อนใช้ Scan Engineer Jobs'
-    );
-    return;
-  }
-
-  let engineerKey = normalizeEngineerName(
-    engineer.name || w.currentNearbyEngineerName || ''
-  );
-
-  if (!engineerKey) {
-    w.showAIOperationsNotice(
-      'ไม่พบชื่อช่าง',
-      'ไม่สามารถระบุชื่อช่างที่เลือกได้'
-    );
-    return;
-  }
-
-  let candidates = [];
-
-  for (const job of jobs) {
-    let status = String(job['Status'] || '')
-      .toLowerCase()
-      .trim();
-
-    if (
-      status.includes('done') ||
-      status.includes('cancel')
-    ) {
-      continue;
-    }
-
-    let assignKey = normalizeEngineerName(
-      job['Assign to'] || ''
-    );
-
-    if (assignKey !== engineerKey) {
-      continue;
-    }
-
-    let coord = await getJobCoord(job);
-
-    if (!coord) {
-      continue;
-    }
-
-    let dist = distanceKm(
-      engineer.coord[0],
-      engineer.coord[1],
-      coord[0],
-      coord[1]
-    );
-
-    candidates.push({
-      job: job,
-      coord: coord,
-      dist: dist
-    });
-  }
-
-  candidates.sort((a, b) => a.dist - b.dist);
-
-  let groups = groupNearbyJobsByLocation(candidates);
-
-  if (!groups.length) {
-    clearEngineerJobScan();
-
-    w.showAIOperationsNotice(
-      'ไม่พบงานของช่าง',
-      'ไม่พบ Job ที่ยังเปิดอยู่และ Assign ให้ช่างคนนี้'
-    );
-    return;
-  }
-
-  drawEngineerJobScan(engineer, groups);
-
-  let nearGroups = groups.filter((item) => {
-    return item.dist <= ENGINEER_JOB_NEAR_LIMIT_KM;
-  });
-
-  let middleGroups = groups.filter((item) => {
-    return (
-      item.dist > ENGINEER_JOB_NEAR_LIMIT_KM &&
-      item.dist <= ENGINEER_JOB_MIDDLE_LIMIT_KM
-    );
-  });
-
-  let farGroups = groups.filter((item) => {
-    return item.dist > ENGINEER_JOB_MIDDLE_LIMIT_KM;
-  });
-
-  let totalJobs = groups.reduce((sum, item) => {
-    return (
-      sum +
-      (
-        item.count ||
-        (Array.isArray(item.jobs) ? item.jobs.length : 1)
-      )
-    );
-  }, 0);
-
-  let lines = [];
-
-  lines.push('ช่าง: ' + (engineer.name || '-'));
-  lines.push('ตำแหน่งอ้างอิง: ' + (engineer.source || '-'));
-  lines.push('Job ทั้งหมด: ' + totalJobs);
-  lines.push('ตำแหน่งงานทั้งหมด: ' + groups.length);
-  lines.push('');
-  lines.push('🟢 ใกล้ไม่เกิน 20 km: ' + nearGroups.length + ' จุด');
-  lines.push('🟠 ระยะกลาง 20-50 km: ' + middleGroups.length + ' จุด');
-  lines.push('🔴 ไกลมากกว่า 50 km: ' + farGroups.length + ' จุด');
-
-  w.showAIOperationsNotice(
-    'Scan Engineer Jobs',
-    lines.join('\n')
-  );
-};
-
 function parseCoordinateInput(value) {
   let text = String(value || '').trim();
 
@@ -7961,27 +7834,184 @@ w.scanNearbyJobs = async function () {
   );
 };
 
-w.removeNearbyJobByRank = function (index) {
-  index = Number(index);
+w.scanEngineerJobs = async function () {
+  if (!aiMap) {
+    return;
+  }
 
-  if (
-    isNaN(index) ||
-    index < 0 ||
-    index >= currentNearbyJobs.length
-  ) {
-    return;
-  }
 
-  currentNearbyJobs.splice(index, 1);
+  let engineer = getCurrentNearbyEngineerLocation();
 
-  clearNearbyJobHighlights();
 
-  if (!currentNearbyEngineer || currentNearbyJobs.length === 0) {
-    currentNearbyJobs = [];
-    return;
-  }
+  if (!engineer) {
+    w.showAIOperationsNotice(
+      'ยังไม่ได้เลือกช่าง',
+      'กรุณาเลือกช่างจาก Departed ล่าสุด หรือ On-site ปัจจุบัน / ล่าสุด ก่อนใช้ Scan Engineer Jobs'
+    );
+    return;
+  }
 
-  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
+
+  let engineerKey = normalizeEngineerName(
+    engineer.name || w.currentNearbyEngineerName || ''
+  );
+
+
+  if (!engineerKey) {
+    w.showAIOperationsNotice(
+      'ไม่พบชื่อช่าง',
+      'ไม่สามารถระบุชื่อช่างที่เลือกได้'
+    );
+    return;
+  }
+
+
+  let candidates = [];
+
+
+  for (const job of jobs) {
+    let status = String(job['Status'] || '')
+      .toLowerCase()
+      .trim();
+
+
+    if (
+      status.includes('done') ||
+      status.includes('cancel')
+    ) {
+      continue;
+    }
+
+
+    let assignKey = normalizeEngineerName(
+      job['Assign to'] || ''
+    );
+
+
+    if (assignKey !== engineerKey) {
+      continue;
+    }
+
+
+    let coord = await getJobCoord(job);
+
+
+    if (!coord) {
+      continue;
+    }
+
+
+    let dist = distanceKm(
+      engineer.coord[0],
+      engineer.coord[1],
+      coord[0],
+      coord[1]
+    );
+
+
+    candidates.push({
+      job: job,
+      coord: coord,
+      dist: dist
+    });
+  }
+
+
+  candidates.sort((a, b) => a.dist - b.dist);
+
+
+  let groups = groupNearbyJobsByLocation(candidates);
+
+
+  if (!groups.length) {
+    clearEngineerJobScan();
+
+
+    w.showAIOperationsNotice(
+      'ไม่พบงานของช่าง',
+      'ไม่พบ Job ที่ยังเปิดอยู่และ Assign ให้ช่างคนนี้'
+    );
+    return;
+  }
+
+
+  drawEngineerJobScan(engineer, groups);
+
+
+  let nearGroups = groups.filter((item) => {
+    return item.dist <= ENGINEER_JOB_NEAR_LIMIT_KM;
+  });
+
+
+  let middleGroups = groups.filter((item) => {
+    return (
+      item.dist > ENGINEER_JOB_NEAR_LIMIT_KM &&
+      item.dist <= ENGINEER_JOB_MIDDLE_LIMIT_KM
+    );
+  });
+
+
+  let farGroups = groups.filter((item) => {
+    return item.dist > ENGINEER_JOB_MIDDLE_LIMIT_KM;
+  });
+
+
+  let totalJobs = groups.reduce((sum, item) => {
+    return (
+      sum +
+      (
+        item.count ||
+        (Array.isArray(item.jobs) ? item.jobs.length : 1)
+      )
+    );
+  }, 0);
+
+
+  let lines = [];
+
+
+  lines.push('ช่าง: ' + (engineer.name || '-'));
+  lines.push('ตำแหน่งอ้างอิง: ' + (engineer.source || '-'));
+  lines.push('Job ทั้งหมด: ' + totalJobs);
+  lines.push('ตำแหน่งงานทั้งหมด: ' + groups.length);
+  lines.push('');
+  lines.push('🟢 ใกล้ไม่เกิน 20 km: ' + nearGroups.length + ' จุด');
+  lines.push('🟠 ระยะกลาง 20-50 km: ' + middleGroups.length + ' จุด');
+  lines.push('🔴 ไกลมากกว่า 50 km: ' + farGroups.length + ' จุด');
+
+
+  w.showAIOperationsNotice(
+    'Scan Engineer Jobs',
+    lines.join('\n')
+  );
+};
+
+w.removeNearbyJobByRank = function (index) {
+  index = Number(index);
+
+
+  if (
+    isNaN(index) ||
+    index < 0 ||
+    index >= currentNearbyJobs.length
+  ) {
+    return;
+  }
+
+
+  currentNearbyJobs.splice(index, 1);
+
+
+  clearNearbyJobHighlights();
+
+
+  if (!currentNearbyEngineer || currentNearbyJobs.length === 0) {
+    currentNearbyJobs = [];
+    return;
+  }
+
+
+  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
 };
 
 function normalizeSiteSearchText(v) {
