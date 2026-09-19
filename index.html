@@ -5058,37 +5058,68 @@ function getRouteSimPointJobId(point, pointNo) {
   return 'จุด ' + pointNo;
 }
 
-async function drawRouteSimulator() {
-  if (routeSimLine) {
+function clearRouteSimulatorDisplay() {
+  if (
+    routeSimLine &&
+    aiMap &&
+    aiMap.hasLayer(routeSimLine)
+  ) {
     aiMap.removeLayer(routeSimLine);
-    routeSimLine = null;
   }
 
-  if (routeSimLabel) {
+  routeSimLine = null;
+
+  routeSimLines.forEach((line) => {
+    if (aiMap && aiMap.hasLayer(line)) {
+      aiMap.removeLayer(line);
+    }
+  });
+
+  routeSimLines = [];
+
+  if (
+    routeSimLabel &&
+    aiMap &&
+    aiMap.hasLayer(routeSimLabel)
+  ) {
     aiMap.removeLayer(routeSimLabel);
-    routeSimLabel = null;
-  }
-  routeSimMarkers.forEach((m) => {
-  aiMap.removeLayer(m);
-});
-
-routeSimMarkers = [];
-
-  if (routeSimPoints.length < 2) {
-    return;
   }
 
-  let points = routeSimPoints.map((p) => {
-  return [
-    Number(p.lat),
-    Number(p.lng)
-  ];
-});
+  routeSimLabel = null;
 
-try {
-  let route = await getRoadRouteFromOSRM(points);
+  routeSimMarkers.forEach((marker) => {
+    if (aiMap && aiMap.hasLayer(marker)) {
+      aiMap.removeLayer(marker);
+    }
+  });
 
-  if (!route || !route.latlngs || !route.latlngs.length) {
+  routeSimMarkers = [];
+}
+
+async function drawRouteSimulator() {
+clearRouteSimulatorDisplay();
+if (!aiMap || routeSimPoints.length < 2) {
+return;
+}
+let points = routeSimPoints
+.map((point) => {
+let lat = Number(point.lat);
+let lng = Number(point.lng);
+if (isNaN(lat) || isNaN(lng)) {
+return null;
+}
+return [lat, lng];
+})
+.filter(Boolean);
+if (points.length < 2) {
+return;
+}
+
+/*
+ * OSRM ตอบแล้ว
+ * ล้างเส้นสำรองก่อนวาดเส้นถนนจริง
+ */
+  clearRouteSimulatorDisplay();
   drawRouteSimulatorFallback(points);
   return;
 }
@@ -5175,9 +5206,15 @@ iconAnchor: [110, 23],
       padding: [60, 60],
     });
   } catch (err) {
-  console.warn('Route simulator failed:', err);
+  console.warn(
+    'Route simulator failed, keep fallback route:',
+    err
+  );
 
-  drawRouteSimulatorFallback(points);
+  /*
+   * ไม่ต้องทำอะไรเพิ่ม
+   * เพราะเส้นสำรอง A → B → C → D แสดงอยู่แล้ว
+   */
 }
 }
 
@@ -5478,7 +5515,7 @@ routeSimMarkers = [];
 
   let timeoutId = setTimeout(() => {
     controller.abort();
-  }, 5000);
+  }, 3000);
 
   try {
     let response = await fetch(url, {
