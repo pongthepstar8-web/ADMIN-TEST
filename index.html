@@ -5023,11 +5023,20 @@ buildAIMapMarkers().then(() => {
 };
 
 function selectRouteSimPoint(coord, meta) {
-  if (!coord || coord.length !== 2) return;
+  if (!coord || coord.length !== 2) {
+    return;
+  }
+
+  let lat = Number(coord[0]);
+  let lng = Number(coord[1]);
+
+  if (isNaN(lat) || isNaN(lng)) {
+    return;
+  }
 
   routeSimPoints.push({
-    lat: Number(coord[0]),
-    lng: Number(coord[1]),
+    lat: lat,
+    lng: lng,
     meta: meta || {}
   });
 
@@ -5035,6 +5044,7 @@ function selectRouteSimPoint(coord, meta) {
     drawRouteSimulator();
   }
 }
+
 function formatRouteLabelJobId(jobId) {
   let s = String(jobId || '').trim();
 
@@ -5078,7 +5088,7 @@ function getRouteSimPointJobId(point, pointNo) {
   return 'จุด ' + pointNo;
 }
 
-async function drawRouteSimulator() {
+function clearRouteSimulatorLayers() {
   routeSimLines.forEach((line) => {
     if (aiMap && aiMap.hasLayer(line)) {
       aiMap.removeLayer(line);
@@ -5088,13 +5098,15 @@ async function drawRouteSimulator() {
   routeSimLines = [];
   routeSimLine = null;
 
-  if (routeSimLabel) {
-    if (aiMap && aiMap.hasLayer(routeSimLabel)) {
-      aiMap.removeLayer(routeSimLabel);
-    }
-
-    routeSimLabel = null;
+  if (
+    routeSimLabel &&
+    aiMap &&
+    aiMap.hasLayer(routeSimLabel)
+  ) {
+    aiMap.removeLayer(routeSimLabel);
   }
+
+  routeSimLabel = null;
 
   routeSimMarkers.forEach((marker) => {
     if (aiMap && aiMap.hasLayer(marker)) {
@@ -5103,115 +5115,146 @@ async function drawRouteSimulator() {
   });
 
   routeSimMarkers = [];
-
-  if (routeSimPoints.length < 2) {
-    return;
-  }
-
-  let points = routeSimPoints.map((point) => {
-    return [
-      Number(point.lat),
-      Number(point.lng)
-    ];
-  });
-
-try {
-  let route = await getRoadRouteFromOSRM(points);
-
-  if (!route || !route.latlngs || !route.latlngs.length) {
-  drawRouteSimulatorFallback(points);
-  return;
 }
 
-    // ✅ เส้นฐานสีฟ้า
-let routeSimBaseLine = w.L.polyline(route.latlngs, {
-  color: '#0ea5e9',
-  weight: 8,
-  opacity: 0.65,
-  lineCap: 'round',
-  lineJoin: 'round',
-  className: 'route-sim-glow'
-}).addTo(aiMap);
+async function drawRouteSimulator() {
+  clearRouteSimulatorLayers();
 
-// ✅ เส้นไฟวิ่งด้านบน
-let routeSimFlowLine = w.L.polyline(route.latlngs, {
-  color: '#e0f2fe',
-  weight: 4,
-  opacity: 1,
-  dashArray: '10, 18',
-  lineCap: 'round',
-  lineJoin: 'round',
-  className: 'route-sim-flow'
-}).addTo(aiMap);
-
-routeSimLines.push(routeSimBaseLine);
-routeSimLines.push(routeSimFlowLine);
-
-// ใช้ routeSimLine อ้างอิง bounds
-routeSimLine = routeSimBaseLine;
-
-(route.legs || []).forEach((leg) => {
-  let startPoint = routeSimPoints[leg.index];
-  let endPoint = routeSimPoints[leg.index + 1];
-
-  if (!startPoint || !endPoint) {
+  if (!aiMap || routeSimPoints.length < 2) {
     return;
   }
 
-  let fromJb = formatRouteLabelJobId(
-  getRouteSimPointJobId(startPoint, leg.from)
-);
+  let points = routeSimPoints
+    .map((point) => {
+      let lat = Number(point.lat);
+      let lng = Number(point.lng);
 
-let toJb = formatRouteLabelJobId(
-  getRouteSimPointJobId(endPoint, leg.to)
-);
+      if (isNaN(lat) || isNaN(lng)) {
+        return null;
+      }
 
-  let mid = [
-    (Number(startPoint.lat) + Number(endPoint.lat)) / 2,
-    (Number(startPoint.lng) + Number(endPoint.lng)) / 2
-  ];
+      return [lat, lng];
+    })
+    .filter(Boolean);
 
-  let label = w.L.marker(mid, {
-    icon: w.L.divIcon({
-      className: '',
-      html: `
-  <div style="
-    background:#020617;
-    color:#bae6fd;
-    padding:7px 11px;
-    border-radius:14px;
-    font-weight:900;
-    border:1px solid #38bdf8;
-    box-shadow:0 0 12px rgba(56,189,248,.7);
-    white-space:nowrap;
-    font-family:Arial;
-    font-size:12px;
-    text-align:center;
-    line-height:1.45;
-  ">
-  📋 ${fromJb} → ${toJb}<br>
-🛣️ ${leg.distanceKm.toFixed(2)} km | ⏱ ${leg.durationMin.toFixed(0)} min
-  </div>
-`,
-iconSize: [220, 46],
-iconAnchor: [110, 23],
-    }),
-  }).addTo(aiMap);
+  if (points.length < 2) {
+    console.warn(
+      'Route Simulator มีพิกัดที่ใช้ได้ไม่ครบ:',
+      points
+    );
+    return;
+  }
 
-  routeSimMarkers.push(label);
-});
+  try {
+    let route = await getRoadRouteFromOSRM(points);
 
-    aiMap.fitBounds(routeSimLine.getBounds(), {
-      padding: [60, 60],
+    if (
+      !route ||
+      !route.latlngs ||
+      !route.latlngs.length
+    ) {
+      drawRouteSimulatorFallback(points);
+      return;
+    }
+
+    let routeSimBaseLine = w.L.polyline(
+      route.latlngs,
+      {
+        color: '#0ea5e9',
+        weight: 8,
+        opacity: 0.65,
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'route-sim-glow'
+      }
+    ).addTo(aiMap);
+
+    let routeSimFlowLine = w.L.polyline(
+      route.latlngs,
+      {
+        color: '#e0f2fe',
+        weight: 4,
+        opacity: 1,
+        dashArray: '10,18',
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'route-sim-flow'
+      }
+    ).addTo(aiMap);
+
+    routeSimLines.push(routeSimBaseLine);
+    routeSimLines.push(routeSimFlowLine);
+
+    routeSimLine = routeSimBaseLine;
+
+    (route.legs || []).forEach((leg) => {
+      let startPoint = routeSimPoints[leg.index];
+      let endPoint = routeSimPoints[leg.index + 1];
+
+      if (!startPoint || !endPoint) {
+        return;
+      }
+
+      let fromJb = formatRouteLabelJobId(
+        getRouteSimPointJobId(startPoint, leg.from)
+      );
+
+      let toJb = formatRouteLabelJobId(
+        getRouteSimPointJobId(endPoint, leg.to)
+      );
+
+      let mid = [
+        (Number(startPoint.lat) + Number(endPoint.lat)) / 2,
+        (Number(startPoint.lng) + Number(endPoint.lng)) / 2
+      ];
+
+      let label = w.L.marker(mid, {
+        icon: w.L.divIcon({
+          className: '',
+          html: `
+            <div style="
+              background:#020617;
+              color:#bae6fd;
+              padding:7px 11px;
+              border-radius:14px;
+              font-weight:900;
+              border:1px solid #38bdf8;
+              box-shadow:0 0 12px rgba(56,189,248,.7);
+              white-space:nowrap;
+              font-family:Arial;
+              font-size:12px;
+              text-align:center;
+              line-height:1.45;
+            ">
+              📋 ${fromJb} → ${toJb}<br>
+              🛣️ ${Number(leg.distanceKm || 0).toFixed(2)} km |
+              ⏱ ${Number(leg.durationMin || 0).toFixed(0)} min
+            </div>
+          `,
+          iconSize: [220, 46],
+          iconAnchor: [110, 23]
+        })
+      }).addTo(aiMap);
+
+      routeSimMarkers.push(label);
+    });
+
+    aiMap.fitBounds(routeSimBaseLine.getBounds(), {
+      padding: [60, 60]
     });
   } catch (err) {
-  console.warn('Route simulator failed:', err);
-  drawRouteSimulatorFallback(points);
-}
+    console.warn('Route simulator failed:', err);
+
+    drawRouteSimulatorFallback(points);
+  }
 }
 
 function drawRouteSimulatorFallback(points) {
-  if (!Array.isArray(points) || points.length < 2) {
+  if (
+    !aiMap ||
+    !Array.isArray(points) ||
+    points.length < 2
+  ) {
     console.warn(
       'Route Simulator fallback มีพิกัดไม่ครบ:',
       points
@@ -5221,11 +5264,16 @@ function drawRouteSimulatorFallback(points) {
 
   let validPoints = points
     .map((point) => {
-      if (Array.isArray(point) && point.length === 2) {
-        return [
-          Number(point[0]),
-          Number(point[1])
-        ];
+      if (
+        Array.isArray(point) &&
+        point.length === 2
+      ) {
+        let lat = Number(point[0]);
+        let lng = Number(point[1]);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return [lat, lng];
+        }
       }
 
       if (
@@ -5241,13 +5289,7 @@ function drawRouteSimulatorFallback(points) {
 
       return null;
     })
-    .filter((point) => {
-      return (
-        point &&
-        !isNaN(point[0]) &&
-        !isNaN(point[1])
-      );
-    });
+    .filter(Boolean);
 
   if (validPoints.length < 2) {
     console.warn(
@@ -5323,16 +5365,20 @@ function drawRouteSimulatorFallback(points) {
           font-family:Arial;
           font-size:12px;
           text-align:center;
+          line-height:1.45;
         ">
           🧭 Route Simulator<br>
           📏 ${totalKm.toFixed(2)} km<br>
-          <span style="font-size:10px;color:#94a3b8">
+          <span style="
+            color:#94a3b8;
+            font-size:10px;
+          ">
             เส้นตรงสำรอง เนื่องจาก Routing ไม่ตอบ
           </span>
         </div>
       `,
-      iconSize: [190, 58],
-      iconAnchor: [95, 29]
+      iconSize: [210, 62],
+      iconAnchor: [105, 31]
     })
   }).addTo(aiMap);
 
@@ -5342,32 +5388,8 @@ function drawRouteSimulatorFallback(points) {
 }
 
 function clearRouteSimulator() {
-  routeSimLines.forEach((line) => {
-    if (aiMap && aiMap.hasLayer(line)) {
-      aiMap.removeLayer(line);
-    }
-  });
+  clearRouteSimulatorLayers();
 
-  routeSimLines = [];
-  routeSimLine = null;
-
-  if (
-    routeSimLabel &&
-    aiMap &&
-    aiMap.hasLayer(routeSimLabel)
-  ) {
-    aiMap.removeLayer(routeSimLabel);
-  }
-
-  routeSimLabel = null;
-
-  routeSimMarkers.forEach((marker) => {
-    if (aiMap && aiMap.hasLayer(marker)) {
-      aiMap.removeLayer(marker);
-    }
-  });
-
-  routeSimMarkers = [];
   routeSimPoints = [];
 }
 
@@ -5436,6 +5458,7 @@ function clearRouteSimulator() {
             alert('Routing error: ไม่สามารถดึงเส้นทางจาก OSRM ได้');
           }
         }
+        
         async function getRoadRouteFromOSRM(points) {
           if (!points || points.length < 2) {
             return null;
