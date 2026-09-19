@@ -5225,25 +5225,32 @@ routeSimLine = fallbackBaseLine;
     icon: w.L.divIcon({
       className: '',
       html: `
-        <div style="
-          background:#020617;
-          color:#bae6fd;
-          padding:7px 11px;
-          border-radius:14px;
-          font-weight:900;
-          border:1px solid #38bdf8;
-          box-shadow:0 0 12px rgba(56,189,248,.7);
-          white-space:nowrap;
-          font-family:Arial;
-          font-size:12px;
-          text-align:center;
-        ">
-          🧭 Route Simulator<br>
-          📏 ${km.toFixed(2)} km
-        </div>
-      `,
-      iconSize: [150, 44],
-      iconAnchor: [75, 22],
+  <div style="
+    background:#020617;
+    color:#bae6fd;
+    padding:7px 11px;
+    border-radius:14px;
+    font-weight:900;
+    border:1px solid #38bdf8;
+    box-shadow:0 0 12px rgba(56,189,248,.7);
+    white-space:nowrap;
+    font-family:Arial;
+    font-size:12px;
+    text-align:center;
+    line-height:1.45;
+  ">
+    📋 ${fromJob} → ${toJob}<br>
+    📏 ${km.toFixed(2)} km<br>
+    <span style="
+      color:#94a3b8;
+      font-size:10px;
+    ">
+      เส้นตรงสำรอง
+    </span>
+  </div>
+`,
+iconSize: [220, 58],
+iconAnchor: [110, 29],
     }),
   }).addTo(aiMap);
 
@@ -5251,6 +5258,21 @@ routeSimLine = fallbackBaseLine;
     padding: [60, 60],
   });
 }
+let firstRoutePoint = routeSimPoints[0];
+
+let lastRoutePoint =
+  routeSimPoints[routeSimPoints.length - 1];
+
+let fromJob = formatRouteLabelJobId(
+  getRouteSimPointJobId(firstRoutePoint, 1)
+);
+
+let toJob = formatRouteLabelJobId(
+  getRouteSimPointJobId(
+    lastRoutePoint,
+    routeSimPoints.length
+  )
+);
 
 function clearRouteSimulator() {
   if (routeSimLine) {
