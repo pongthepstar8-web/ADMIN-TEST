@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🚀 TEST NOC Command Center</title>
+    <title>🚀 NOC Command Center</title>
 
     <!-- ✅ LIB -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
@@ -1169,7 +1169,6 @@ let networkGroupSubFilters = [];
       let SITE_COORD = {};
       let TRAVEL_HISTORY = {};
       let SITE_COORD_INDEX = {};
-      let SPECIAL_SITE_COORD_INDEX = {};
       let APPS_DATA_READY = false;
       let appsDataPromise = null;
 
@@ -1480,28 +1479,8 @@ function normalizeSiteCodeKey(v) {
 
   return parts.join('|');
 }
-
-function normalizeSpecialSiteKey(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/[()[\]{}|,./\\_-]/g, '');
-}
-
-function isSpecialSiteType(type, siteName) {
-  let typeText = String(type || '').trim().toUpperCase();
-  let nameText = String(siteName || '').trim().toUpperCase();
-
-  return (
-    ['INF', 'IPV', 'BIPV', 'INL'].includes(typeText) ||
-    /^(?:BINF|BIPV|BINL|INF|IPV|INL)/i.test(nameText)
-  );
-}
-
 function buildSiteCoordIndex() {
   SITE_COORD_INDEX = {};
-  SPECIAL_SITE_COORD_INDEX = {};
 
   const source = SITE_COORD || {};
   const keys = Object.keys(source);
@@ -1529,132 +1508,26 @@ function buildSiteCoordIndex() {
 
     const norm = normalizeSiteCodeKey(key);
 
-    if (norm) {
-      if (SITE_COORD_INDEX[norm]) {
-        console.warn('Duplicate normalized site key:', {
-          norm,
-          oldKey: SITE_COORD_INDEX[norm].key,
-          newKey: key
-        });
-      }
+    if (!norm) return;
 
-      SITE_COORD_INDEX[norm] = {
-        key: key,
-        lat: lat,
-        lng: lng,
-        type: item.type || '',
-        address: item.address || ''
-      };
+    if (SITE_COORD_INDEX[norm]) {
+      console.warn('Duplicate normalized site key:', {
+        norm,
+        oldKey: SITE_COORD_INDEX[norm].key,
+        newKey: key
+      });
     }
 
-    if (isSpecialSiteType(item.type, key)) {
-      let specialKey = normalizeSpecialSiteKey(key);
-
-      if (specialKey) {
-        SPECIAL_SITE_COORD_INDEX[specialKey] = {
-          key: key,
-          lat: lat,
-          lng: lng,
-          type: item.type || '',
-          address: item.address || '',
-          matchSource: 'SITE_NAME'
-        };
-      }
-
-      let addressKey = normalizeSpecialSiteKey(item.address);
-
-      if (addressKey && addressKey.length >= 6) {
-        SPECIAL_SITE_COORD_INDEX[addressKey] = {
-          key: key,
-          lat: lat,
-          lng: lng,
-          type: item.type || '',
-          address: item.address || '',
-          matchSource: 'ADDRESS'
-        };
-      }
-    }
+    SITE_COORD_INDEX[norm] = {
+      key: key,
+      lat: lat,
+      lng: lng,
+      type: item.type || '',
+      address: item.address || ''
+    };
   });
 
   console.log('SITE_COORD_INDEX READY:', Object.keys(SITE_COORD_INDEX).length);
-
-  console.log(
-    'SPECIAL_SITE_COORD_INDEX READY:',
-    Object.keys(SPECIAL_SITE_COORD_INDEX).length
-  );
-}
-
-console.log('CHECK BINF3750012 INDEX:', {
-  siteCoord: SITE_COORD['BINF3750012'],
-  normalKey: normalizeSpecialSiteKey('BINF3750012'),
-  specialCoord:
-    SPECIAL_SITE_COORD_INDEX[
-      normalizeSpecialSiteKey('BINF3750012')
-    ],
-  specialCount: Object.keys(SPECIAL_SITE_COORD_INDEX || {}).length
-});
-
-function extractSpecialSiteCodeFromTitle(title) {
-  let text = String(title || '');
-
-  let match = text.match(
-    /\b(?:BINF|BIPV|BINL|INF|IPV|INL)[A-Z0-9_-]*\b/i
-  );
-
-  return match ? match[0].trim() : '';
-}
-
-function findSpecialSiteCoordFromTitle(title) {
-  let text = String(title || '').trim();
-
-  if (!text) {
-    return null;
-  }
-
-  let specialCode = extractSpecialSiteCodeFromTitle(text);
-
-  if (specialCode) {
-    let codeKey = normalizeSpecialSiteKey(specialCode);
-    let codeItem = SPECIAL_SITE_COORD_INDEX[codeKey];
-
-    if (codeItem) {
-      return {
-        lat: Number(codeItem.lat),
-        lng: Number(codeItem.lng),
-        key: codeItem.key,
-        type: codeItem.type,
-        address: codeItem.address,
-        matchedBy: 'SPECIAL_CODE',
-        matchedValue: specialCode
-      };
-    }
-  }
-
-  let normalizedTitle = normalizeSpecialSiteKey(text);
-
-  let matchedKey = Object.keys(SPECIAL_SITE_COORD_INDEX).find((key) => {
-    if (!key || key.length < 6) {
-      return false;
-    }
-
-    return normalizedTitle.includes(key);
-  });
-
-  if (!matchedKey) {
-    return null;
-  }
-
-  let matchedItem = SPECIAL_SITE_COORD_INDEX[matchedKey];
-
-  return {
-    lat: Number(matchedItem.lat),
-    lng: Number(matchedItem.lng),
-    key: matchedItem.key,
-    type: matchedItem.type,
-    address: matchedItem.address,
-    matchedBy: matchedItem.matchSource || 'SPECIAL_NAME',
-    matchedValue: matchedItem.key
-  };
 }
 
 async function forceReloadAppsDataForAIBoard() {
@@ -1871,62 +1744,6 @@ function getProvinceCodeFromName(province) {
     })
     .filter((x) => x.name);
 }
-
-function getProvinceCodeForSearchGroup(provinceName) {
-  let raw = String(provinceName || '').trim();
-  let rawLower = raw.toLowerCase();
-
-  if (!raw) {
-    return '';
-  }
-
-  if (PROV_CODE[raw]) {
-    return String(PROV_CODE[raw] || '').toLowerCase().trim();
-  }
-
-  let foundKey = Object.keys(PROV_CODE || {}).find((k) => {
-    return String(k || '').trim().toLowerCase() === rawLower;
-  });
-
-  if (foundKey) {
-    return String(PROV_CODE[foundKey] || '').toLowerCase().trim();
-  }
-
-  return rawLower;
-}
-
-function getActiveTopSearchGroupKeys() {
-  let searchText = String($('#search').val() || '')
-    .toLowerCase()
-    .trim();
-
-  if (!searchText) {
-    return null;
-  }
-
-  let keys = searchText.split(/\s+/).filter(Boolean);
-
-  let groupKey = keys.find((k) => TOP_SEARCH_GROUP_MAP[k]);
-
-  if (!groupKey) {
-    return null;
-  }
-
-  return TOP_SEARCH_GROUP_MAP[groupKey] || null;
-}
-
-function isMatchTopSearchProvinceGroup(provinceName) {
-  let groupKeys = getActiveTopSearchGroupKeys();
-
-  if (!groupKeys) {
-    return true;
-  }
-
-  let provinceCode = getProvinceCodeForSearchGroup(provinceName);
-
-  return groupKeys.includes(provinceCode);
-}
-
 function getShiftStaffMapByProvince(province) {
   let matchKeys = getProvinceMatchKeys(province);
 
@@ -1945,11 +1762,7 @@ function getShiftStaffMapByProvince(province) {
 
       if (!key) return;
 
-      if (!isMatchTopSearchProvinceGroup(x.province)) {
-  return;
-}
-
-map[key] = {
+      map[key] = {
   name: x.name || '',
   mobile: formatMobileDisplay(x.mobile),
   province: x.province || '',
@@ -2229,231 +2042,27 @@ function getShiftNamesByProvince(province) {
         if (t === 'minor') return pr === 'MINOR' || pr === 'NONE';
         return true;
       }
-
-      async function exportJPG(p) {
-  let source = document.getElementById(p);
-
-  if (!source) {
-    console.warn('ไม่พบการ์ดจังหวัดสำหรับ Export:', p);
-    return;
-  }
-
-  /*
-   * นับเฉพาะแถว Job ที่อยู่ในการ์ดจังหวัดนี้
-   * ไม่ใช้ตัวเลขจาก kpiBar รวมของ Dashboard
-   */
-  let rows = Array.from(
-    source.querySelectorAll('table tr')
-  ).filter((row) => {
-    return row.querySelectorAll('td').length > 0;
-  });
-
-  let critical = 0;
-  let major = 0;
-  let minor = 0;
-  let overdue = 0;
-
-  rows.forEach((row) => {
-    let priorityBadge = row.querySelector('.badge');
-    let priority = String(
-      priorityBadge ? priorityBadge.textContent : ''
-    )
-      .trim()
-      .toUpperCase();
-
-    if (priority === 'CRITICAL') {
-      critical++;
-    } else if (priority === 'MAJOR') {
-      major++;
-    } else if (priority === 'MINOR') {
-      minor++;
-    }
-
-    if (row.classList.contains('overdue')) {
-      overdue++;
-    }
-  });
-
-  let total = rows.length;
-
-  /*
-   * สร้าง KPI ของจังหวัดที่ Export
-   */
-  let provinceKpi = document.createElement('div');
-
-  provinceKpi.className = 'province-export-kpi';
-
-  provinceKpi.style.display = 'flex';
-  provinceKpi.style.alignItems = 'center';
-  provinceKpi.style.justifyContent = 'center';
-  provinceKpi.style.flexWrap = 'wrap';
-  provinceKpi.style.gap = '12px';
-  provinceKpi.style.margin = '0 0 18px 0';
-  provinceKpi.style.padding = '0';
-
-  provinceKpi.innerHTML = `
-    <div style="
-      min-width:118px;
-      padding:12px 18px;
-      border-radius:14px;
-      background:#b33b3f;
-      color:#e5e7eb;
-      text-align:center;
-      font-size:18px;
-      font-weight:900;
-      box-sizing:border-box;
-    ">
-      Critical:${critical}
-    </div>
-
-    <div style="
-      min-width:118px;
-      padding:12px 18px;
-      border-radius:14px;
-      background:#b87812;
-      color:#e5e7eb;
-      text-align:center;
-      font-size:18px;
-      font-weight:900;
-      box-sizing:border-box;
-    ">
-      Major:${major}
-    </div>
-
-    <div style="
-      min-width:118px;
-      padding:12px 18px;
-      border-radius:14px;
-      background:#16924d;
-      color:#e5e7eb;
-      text-align:center;
-      font-size:18px;
-      font-weight:900;
-      box-sizing:border-box;
-    ">
-      Minor:${minor}
-    </div>
-
-    <div style="
-      min-width:118px;
-      padding:12px 18px;
-      border-radius:14px;
-      background:#53627b;
-      color:#e5e7eb;
-      text-align:center;
-      font-size:18px;
-      font-weight:900;
-      box-sizing:border-box;
-    ">
-      Total:${total}
-    </div>
-
-    <div style="
-      min-width:130px;
-      padding:12px 18px;
-      border-radius:14px;
-      background:#822326;
-      color:#e5e7eb;
-      text-align:center;
-      font-size:18px;
-      font-weight:900;
-      box-sizing:border-box;
-    ">
-      Overdue:${overdue}
-    </div>
-  `;
-
-  /*
-   * สร้างพื้นที่ชั่วคราวสำหรับ Export
-   */
-  let box = document.createElement('div');
-
-  box.style.position = 'fixed';
-  box.style.left = '-100000px';
-  box.style.top = '0';
-  box.style.background = '#0f172a';
-  box.style.padding = '30px';
-  box.style.width = Math.max(source.scrollWidth, 1400) + 'px';
-  box.style.height = 'auto';
-  box.style.maxHeight = 'none';
-  box.style.overflow = 'visible';
-  box.style.boxSizing = 'border-box';
-  box.style.zIndex = '-1';
-
-  let provinceClone = source.cloneNode(true);
-
-  /*
-   * ป้องกัน ID ซ้ำกับการ์ดต้นฉบับ
-   */
-  provinceClone.removeAttribute('id');
-
-  provinceClone.style.display = 'block';
-  provinceClone.style.width = '100%';
-  provinceClone.style.height = 'auto';
-  provinceClone.style.maxHeight = 'none';
-  provinceClone.style.overflow = 'visible';
-
-  /*
-   * ยกเลิก scroll และ max-height ภายใน clone
-   * เพื่อให้ Export Job ครบทุกแถว
-   */
-  provinceClone.querySelectorAll('*').forEach((el) => {
-    let computed = window.getComputedStyle(el);
-
-    if (
-      computed.overflow === 'auto' ||
-      computed.overflow === 'scroll' ||
-      computed.overflowY === 'auto' ||
-      computed.overflowY === 'scroll'
-    ) {
-      el.style.height = 'auto';
-      el.style.maxHeight = 'none';
-      el.style.overflow = 'visible';
-      el.style.overflowY = 'visible';
-    }
-  });
-
-  box.appendChild(provinceKpi);
-  box.appendChild(provinceClone);
-
-  document.body.appendChild(box);
-
-  /*
-   * รอให้ clone จัด layout เสร็จก่อนจับภาพ
-   */
-  await new Promise((resolve) => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(resolve);
-    });
-  });
-
-  try {
-    let canvas = await html2canvas(box, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#0f172a',
-      width: box.scrollWidth,
-      height: box.scrollHeight,
-      windowWidth: box.scrollWidth,
-      windowHeight: box.scrollHeight,
-      scrollX: 0,
-      scrollY: 0
-    });
-
-    let a = document.createElement('a');
-
-    a.href = canvas.toDataURL('image/jpeg', 0.95);
-    a.download = 'NOC_' + p + '.jpg';
-
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  } catch (err) {
-    console.error('Export JPG failed:', err);
-  } finally {
-    box.remove();
-  }
-}
+      function exportJPG(p) {
+        let box = document.createElement('div');
+        box.style.background = '#0f172a';
+        box.style.padding = '20px';
+        box.appendChild(document.getElementById('kpiBar').cloneNode(true));
+        box.appendChild(document.getElementById(p).cloneNode(true));
+        document.body.appendChild(box);
+        html2canvas(box, {
+          scale: 2,
+          useCORS: true,
+          width: box.scrollWidth,
+          height: box.scrollHeight,
+          windowWidth: box.scrollWidth,
+        }).then((c) => {
+          let a = document.createElement('a');
+          a.href = c.toDataURL('image/jpeg');
+          a.download = 'NOC_' + p + '.jpg';
+          a.click();
+          document.body.removeChild(box);
+        });
+      }
 
       file.onchange = (e) => {
   if (window.aiBoardWindow && !window.aiBoardWindow.closed) {
@@ -3033,12 +2642,10 @@ await forceReloadAppsDataForAIBoard();
     siteCoordCount: Object.keys(SITE_COORD || {}).length,
     siteIndexCount: Object.keys(SITE_COORD_INDEX || {}).length
   });
-  let prov = $('#provinceFilter').val();
+        let prov = $('#provinceFilter').val();
+        
 
-let aiSearchText = ($('#search').val() || '').toLowerCase().trim();
-let aiSearchKeys = aiSearchText ? aiSearchText.split(/\s+/).filter(Boolean) : [];
-
-let sourceData = Array.isArray(latestDashboardData) && latestDashboardData.length
+        let sourceData = Array.isArray(latestDashboardData) && latestDashboardData.length
   ? latestDashboardData.map((r) => ({ ...r }))
   : Array.isArray(data)
   ? data.map((r) => ({ ...r }))
@@ -3046,72 +2653,20 @@ let sourceData = Array.isArray(latestDashboardData) && latestDashboardData.lengt
 
 console.log('AI BOARD OPEN DATA:', {
   version: dashboardDataVersion,
-  sourceRows: sourceData.length,
-  search: aiSearchText
+  sourceRows: sourceData.length
 });
 
 let jobs = [];
 
 sourceData.forEach((r) => {
-  let p = mapCol(r, ['Province Name']);
-
-  if (prov && p !== prov) return;
-  if (!passToolSubFilter(r)) return;
-
-  let pr = (r['Priority'] || 'NONE').toUpperCase();
-  let hr = getHr(r['Create Time']);
-  let limit = pr === 'CRITICAL' ? 3 : pr === 'MAJOR' ? 10 : 1000;
-  let overdue = Math.max(0, hr - limit);
-
-  let job = String(r['Job ID'] || '').toLowerCase();
-  let title = String(r['Job Title'] || '').toLowerCase();
-  let status = String(r['Status'] || '').toLowerCase();
-  let assign = String(r['Assign to'] || '').toLowerCase();
-  let province = String(p || '').toLowerCase();
-  let district = String(r['District Name'] || '').toLowerCase();
-  let work = String(getWorkType(r['Job Title'] || '').text || '').toLowerCase();
-  let code = String(PROV_CODE[p] || '').toLowerCase();
-
-  let text =
-    job +
-    ' ' +
-    title +
-    ' ' +
-    status +
-    ' ' +
-    assign +
-    ' ' +
-    province +
-    ' ' +
-    district +
-    ' ' +
-    work +
-    ' ' +
-    code;
-
-  if (overdue > 0) text += ' overdue';
-
-  for (let key of aiSearchKeys) {
-    key = String(key || '').toLowerCase().trim();
-
-    if (key === 'overdue' && overdue <= 0) return;
-
-    if (key !== 'overdue') {
-      let groupKeys = TOP_SEARCH_GROUP_MAP[key];
-
-      if (groupKeys) {
-        let matchedGroup = groupKeys.some((g) => {
-          return code === String(g || '').toLowerCase();
-        });
-
-        if (!matchedGroup) return;
-      } else {
-        if (!text.includes(key)) return;
-      }
-    }
-  }
-
-  if (!pass(pr, overdue > 0)) return;
+          let p = mapCol(r, ['Province Name']);
+          if (prov && p !== prov) return;
+          if (!passToolSubFilter(r)) return;
+          let pr = (r['Priority'] || 'NONE').toUpperCase();
+          let hr = getHr(r['Create Time']);
+          let limit = pr === 'CRITICAL' ? 3 : pr === 'MAJOR' ? 10 : 1000;
+          let overdue = Math.max(0, hr - limit);
+          if (!pass(pr, overdue > 0)) return;
           let score = 0;
           if (pr === 'CRITICAL') score += 100;
           else if (pr === 'MAJOR') score += 60;
@@ -3227,56 +2782,58 @@ Object.values(shiftStaffMap).forEach((staff) => {
 
   if (!eng) return;
 
-  if (!isMatchTopSearchProvinceGroup(staff.province)) {
-    return;
-  }
-
   if (!engineers[eng]) {
     engineers[eng] = {
       jobs: [],
       districts: new Set(),
       fromShift: true,
       mobile: String(staff.mobile || '')
-        .replace(/tel:\S+\s*/i, '')
-        .trim(),
+  .replace(/tel:\S+\s*/i, '')
+  .trim(),
       local: staff.local || '',
       shift: staff.shift || '',
       province: staff.province || ''
     };
   }
-
   if (!engineers[eng].mobile && staff.mobile) {
-    engineers[eng].mobile = String(staff.mobile || '')
-      .replace(/^tel:\S+\s*/i, '')
-      .trim();
-  }
+  engineers[eng].mobile = String(staff.mobile || '')
+    .replace(/^tel:\S+\s*/i, '')
+    .trim();
+}
 });
 
 // ✅ 2. เติมงานจาก Assign to
 jobs.forEach((r) => {
-  let jobProvince = r['Province Name'] || '';
-
-  if (!isMatchTopSearchProvinceGroup(jobProvince)) {
-    return;
-  }
-
   let eng = (r['Assign to'] || '').trim();
 
   if (!eng) return;
 
   let key = normalizeEngineerName(eng);
-  let staff = shiftStaffMap[key] || {};
+let staff = shiftStaffMap[key] || {};
 
   if (!engineers[eng]) {
     engineers[eng] = {
       jobs: [],
       districts: new Set(),
       fromShift: false,
-      mobile: staff.mobile || '',
+      mobile: String(staff.mobile || '')
+  .replace(/tel:\S+\s*/i, '')
+  .trim(),
       local: staff.local || '',
       shift: staff.shift || '',
       province: staff.province || ''
     };
+  }
+
+  // ถ้ามีข้อมูล mobile จาก shift ให้เติมให้
+  if (!engineers[eng].mobile && staff.mobile) {
+  engineers[eng].mobile = String(staff.mobile || '')
+    .replace(/^tel:\S+\s*/i, '')
+    .trim();
+}
+
+  if (r['District Name']) {
+    engineers[eng].districts.add(r['District Name']);
   }
 
   engineers[eng].jobs.push(r);
@@ -3305,89 +2862,6 @@ jobs.forEach((r) => {
       <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
 
       <style>
-
-        .engineer-job-scan-flow {
-  stroke-dasharray: 10 18;
-  animation: engineerJobScanFlow 1s linear infinite alternate;
-}
-
-.engineer-job-scan-glow {
-  filter: drop-shadow(0 0 6px currentColor);
-}
-
-@keyframes engineerJobScanFlow {
-  from {
-    stroke-dashoffset: 28;
-  }
-
-  to {
-    stroke-dashoffset: -28;
-  }
-}
-
-        .nearby-flow-line {
-  stroke-dasharray: 10 18;
-  animation: nearbyFlowMove 0.9s linear infinite;
-}
-
-.nearby-glow-line {
-  filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.9));
-}
-
-@keyframes nearbyFlowMove {
-  from {
-    stroke-dashoffset: 28;
-  }
-
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-        .map-select {
-  height: 46px;
-  min-width: 300px;
-  background: #1e293b;
-  color: #ffffff;
-  border: 1px solid #334155;
-  border-radius: 14px;
-  padding: 0 42px 0 14px;
-  font-weight: 900;
-  font-size: 14px;
-  outline: none;
-  cursor: pointer;
-
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-
-  background-image:
-    linear-gradient(45deg, transparent 50%, #e5e7eb 50%),
-    linear-gradient(135deg, #e5e7eb 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) 19px,
-    calc(100% - 12px) 19px;
-  background-size:
-    6px 6px,
-    6px 6px;
-  background-repeat: no-repeat;
-}
-
-.map-select:hover {
-  border-color: #64748b;
-}
-
-.map-select:focus {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
-}
-        
-        .district-boundary-path {
-  stroke: #94a3b8 !important;
-  stroke-width: 0.5 !important;
-  stroke-opacity: 0.18 !important;
-  fill-opacity: 0 !important;
-}
 
         .engineer-route-dd {
   position: relative;
@@ -4455,7 +3929,7 @@ Object.entries(engineers)
     onclick="window.toggleEngineerRouteDropdown('departedEngineerDropdown', event)"
   >
     <span id="departedEngineerDropdownLabel">🚗 Departed ล่าสุด</span>
-    <span class="dropdown-arrow">▾</span>
+    <span>⌄</span>
   </button>
 
   <div class="engineer-route-dd-panel">
@@ -4476,7 +3950,7 @@ Object.entries(engineers)
     onclick="window.toggleEngineerRouteDropdown('onsiteEngineerDropdown', event)"
   >
     <span id="onsiteEngineerDropdownLabel">🧑‍🔧 On-site ปัจจุบัน / ล่าสุด</span>
-    <span class="dropdown-arrow">▾</span>
+    <span>⌄</span>
   </button>
 
   <div class="engineer-route-dd-panel">
@@ -4498,46 +3972,33 @@ Object.entries(engineers)
     </button>
 
     <div class="map-tools-menu" id="mapToolsMenu">
-  <button class="map-tools-item" onclick="window.scanNearbyJobs()">
-    📍 Scan Nearby Jobs
-  </button>
+      <button class="map-tools-item" onclick="window.openGoogleRoute()">
+        🧭 Open Google Maps
+      </button>
 
-  <button class="map-tools-item" onclick="window.scanEngineerJobs()">
-    🧑‍🔧 Scan Engineer Jobs
-  </button>
+      <button class="map-tools-item" onclick="window.clearAIRoute()">
+        🧹 Clear Route
+      </button>
 
-  <button class="map-tools-item" onclick="window.openCoordinateJobScanner()">
-    🔎 Search by Coordinate
-  </button>
+      <button class="map-tools-item" onclick="window.fitAllMarkers()">
+        📍 Fit All Jobs
+      </button>
 
-  <button class="map-tools-item" onclick="window.openGoogleRoute()">
-    🧭 Open Google Maps
-  </button>
-
-  <button class="map-tools-item" onclick="window.fitAllMarkers()">
-    📍 Fit All Jobs
-  </button>
-
-  <button
-    id="districtSourceBtn"
-    class="map-tools-item"
-    onclick="window.showDistrictSourceJobs()"
-  >
-    🗺️ District Source (0)
-  </button>
-
-  <button class="map-tools-item" onclick="window.clearAIRoute()">
-    🧹 Clear Route
-  </button>
-
-  <button
-    id="clearTravelLogBtn"
-    class="map-tools-item"
-    onclick="window.clearTravelLogAdmin()"
-  >
-    🗑️ Clear Travel Log
-  </button>
-</div>
+      <button
+  id="districtSourceBtn"
+  class="map-tools-item"
+  onclick="window.showDistrictSourceJobs()"
+>
+  🗺️ District Source (0)
+</button>
+      <button
+  id="clearTravelLogBtn"
+  class="map-tools-item"
+  onclick="window.clearTravelLogAdmin()"
+>
+  🧹 Clear Travel Log
+</button>
+    </div>
   </div>
 </div><div id="aiMap"></div></div><script>window.AI_JOBS=${safeJobsJson};<\/script></body></html>`;
   w.document.open();
@@ -4546,12 +4007,6 @@ w.document.close();
 let aiMapInited = false,
   aiMap = null,
   aiMarkers = [],
-  aiAllPoints = [];
-
-  const DISTRICT_GEOJSON_URL =
-  'https://pongthepstar8-web.github.io/ADMIN-TEST/thailand-districts.geojson';
-
-let districtBoundaryLayer = null;
   aiAllPoints = [],
   onsiteEngineerIndex = {},
   departedEngineerIndex = {},
@@ -4579,12 +4034,6 @@ let districtBoundaryLayer = null;
   engineerTravelLines = [],
   engineerTravelMarkers = [],
   engineerTravelOn = false;
-
-  let nearbyJobMarkers = [];
-  let nearbyJobLines = [];
-  let currentNearbyEngineer = null;
-  let currentNearbyJobs = [];
-  let coordinateSearchMarker = null;
 
   w.showAIOperationsNotice = function (title, message) {
   let old = w.document.getElementById('aiOperationsNotice');
@@ -4671,157 +4120,6 @@ let districtBoundaryLayer = null;
 
   w.document.body.appendChild(box);
 };
-
-function getProvinceNameFromFeature(feature) {
-  let p = feature.properties || {};
-
-  return String(
-    p.PROVINCE ||
-    p.province ||
-    p.PROV_NAM_T ||
-    p.prov_nam_t ||
-    p.NAME_1 ||
-    p.name ||
-    ''
-  ).trim();
-}
-
-async function renderSelectedProvinceBoundary() {
-  if (!aiMap) return;
-
-  if (provinceBoundaryLayer) {
-    aiMap.removeLayer(provinceBoundaryLayer);
-    provinceBoundaryLayer = null;
-  }
-
-  let selectedProvince = String($('#provinceFilter').val() || '').trim();
-
-  try {
-    let res = await fetch(PROVINCE_GEOJSON_URL + '?ts=' + Date.now());
-    let geojson = await res.json();
-
-    let selectedBounds = null;
-
-    provinceBoundaryLayer = w.L.geoJSON(geojson, {
-      style: function (feature) {
-        let provinceName = getProvinceNameFromFeature(feature);
-        let isSelected =
-          selectedProvince &&
-          provinceName === selectedProvince;
-
-        return {
-          color: isSelected ? '#facc15' : '#64748b',
-          weight: isSelected ? 5 : 1,
-          opacity: isSelected ? 1 : 0.25,
-          fillColor: isSelected ? '#facc15' : '#0f172a',
-          fillOpacity: isSelected ? 0.08 : 0.02
-        };
-      },
-
-      onEachFeature: function (feature, layer) {
-        let provinceName = getProvinceNameFromFeature(feature);
-
-        if (provinceName) {
-          layer.bindTooltip(provinceName, {
-            sticky: true
-          });
-        }
-
-        if (
-          selectedProvince &&
-          provinceName === selectedProvince
-        ) {
-          selectedBounds = layer.getBounds();
-        }
-      }
-    }).addTo(aiMap);
-
-    if (selectedBounds) {
-      aiMap.fitBounds(selectedBounds, {
-        padding: [50, 50]
-      });
-    }
-  } catch (err) {
-    console.warn('โหลด Province Boundary ไม่สำเร็จ:', err);
-  }
-}
-
-function getDistrictNameFromFeature(feature) {
-  let p = feature.properties || {};
-
-  return String(
-    p.shapeName ||
-    p.ADM2_TH ||
-    p.ADM2_EN ||
-    p.DISTRICT ||
-    p.district ||
-    p.NAME_2 ||
-    p.name ||
-    ''
-  ).trim();
-}
-
-function normalizeDistrictBoundaryName(v) {
-  return String(v || '')
-    .trim()
-    .replace(/^อำเภอ/g, '')
-    .replace(/^อ\./g, '')
-    .replace(/\s+/g, '')
-    .toLowerCase();
-}
-
-async function renderDistrictBoundaries() {
-  if (!aiMap) return;
-
-  if (districtBoundaryLayer) {
-    aiMap.removeLayer(districtBoundaryLayer);
-    districtBoundaryLayer = null;
-  }
-
-  try {
-    let res = await fetch(DISTRICT_GEOJSON_URL + '?ts=' + Date.now());
-    let geojson = await res.json();
-
-    if (!aiMap.getPane('districtBoundaryPane')) {
-      aiMap.createPane('districtBoundaryPane');
-    }
-
-    let pane = aiMap.getPane('districtBoundaryPane');
-
-    pane.style.zIndex = 250;
-    pane.style.pointerEvents = 'none';
-
-    districtBoundaryLayer = w.L.geoJSON(geojson, {
-  pane: 'districtBoundaryPane',
-  interactive: false,
-
-  style: function () {
-    return {
-      color: '#64748b',
-      weight: 0.7,
-      opacity: 0.28,
-      fillColor: '#0f172a',
-      fillOpacity: 0
-    };
-  }
-}).addTo(aiMap);
-
-districtBoundaryLayer.setStyle({
-  color: '#64748b',
-  weight: 0.7,
-  opacity: 0.28,
-  fillOpacity: 0
-});
-
-    console.log('DISTRICT BOUNDARY READY:', {
-      count: geojson.features ? geojson.features.length : 0
-    });
-  } catch (err) {
-    console.warn('โหลด District GeoJSON ไม่สำเร็จ:', err);
-  }
-}
-
-
         w.initAIMap = function () {
           if (aiMapInited) {
             setTimeout(() => aiMap && aiMap.invalidateSize(), 250);
@@ -4836,16 +4134,11 @@ districtBoundaryLayer.setStyle({
           );
 
           w.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap',
-}).addTo(aiMap);
+            maxZoom: 19,
+            attribution: '© OpenStreetMap',
+          }).addTo(aiMap);
 
-// ปิดไว้ก่อนระหว่างทดสอบเส้นเขตอำเภอ
-// renderSelectedProvinceBoundary();
-
-buildAIMapMarkers().then(() => {
-  renderDistrictBoundaries();
-
+          buildAIMapMarkers().then(() => {
   buildOnsiteEngineerSelect();
   buildDepartedEngineerSelect();
   applyMapAdminPermission();
@@ -5023,20 +4316,11 @@ buildAIMapMarkers().then(() => {
 };
 
 function selectRouteSimPoint(coord, meta) {
-  if (!coord || coord.length !== 2) {
-    return;
-  }
-
-  let lat = Number(coord[0]);
-  let lng = Number(coord[1]);
-
-  if (isNaN(lat) || isNaN(lng)) {
-    return;
-  }
+  if (!coord || coord.length !== 2) return;
 
   routeSimPoints.push({
-    lat: lat,
-    lng: lng,
+    lat: Number(coord[0]),
+    lng: Number(coord[1]),
     meta: meta || {}
   });
 
@@ -5044,7 +4328,6 @@ function selectRouteSimPoint(coord, meta) {
     drawRouteSimulator();
   }
 }
-
 function formatRouteLabelJobId(jobId) {
   let s = String(jobId || '').trim();
 
@@ -5088,265 +4371,164 @@ function getRouteSimPointJobId(point, pointNo) {
   return 'จุด ' + pointNo;
 }
 
-function clearRouteSimulatorLayers() {
-  routeSimLines.forEach((line) => {
-    if (aiMap && aiMap.hasLayer(line)) {
-      aiMap.removeLayer(line);
-    }
-  });
-
-  routeSimLines = [];
-  routeSimLine = null;
-
-  if (
-    routeSimLabel &&
-    aiMap &&
-    aiMap.hasLayer(routeSimLabel)
-  ) {
-    aiMap.removeLayer(routeSimLabel);
-  }
-
-  routeSimLabel = null;
-
-  routeSimMarkers.forEach((marker) => {
-    if (aiMap && aiMap.hasLayer(marker)) {
-      aiMap.removeLayer(marker);
-    }
-  });
-
-  routeSimMarkers = [];
-}
-
 async function drawRouteSimulator() {
-  clearRouteSimulatorLayers();
+  if (routeSimLine) {
+    aiMap.removeLayer(routeSimLine);
+    routeSimLine = null;
+  }
 
-  if (!aiMap || routeSimPoints.length < 2) {
+  if (routeSimLabel) {
+    aiMap.removeLayer(routeSimLabel);
+    routeSimLabel = null;
+  }
+  routeSimMarkers.forEach((m) => {
+  aiMap.removeLayer(m);
+});
+
+routeSimMarkers = [];
+
+  if (routeSimPoints.length < 2) {
     return;
   }
 
-  let points = routeSimPoints
-    .map((point) => {
-      let lat = Number(point.lat);
-      let lng = Number(point.lng);
+  let points = routeSimPoints.map((p) => {
+  return [
+    Number(p.lat),
+    Number(p.lng)
+  ];
+});
 
-      if (isNaN(lat) || isNaN(lng)) {
-        return null;
-      }
+try {
+  let route = await getRoadRouteFromOSRM(points);
 
-      return [lat, lng];
-    })
-    .filter(Boolean);
-
-  if (points.length < 2) {
-    console.warn(
-      'Route Simulator มีพิกัดที่ใช้ได้ไม่ครบ:',
-      points
-    );
-    return;
-  }
-
-  try {
-    let route = await getRoadRouteFromOSRM(points);
-
-    if (
-      !route ||
-      !route.latlngs ||
-      !route.latlngs.length
-    ) {
-      drawRouteSimulatorFallback(points);
+    if (!route || !route.latlngs || !route.latlngs.length) {
+      drawRouteSimulatorFallback(points[0], points[points.length - 1]);
       return;
     }
 
-    let routeSimBaseLine = w.L.polyline(
-      route.latlngs,
-      {
-        color: '#0ea5e9',
-        weight: 8,
-        opacity: 0.65,
-        lineCap: 'round',
-        lineJoin: 'round',
-        className: 'route-sim-glow'
-      }
-    ).addTo(aiMap);
+    // ✅ เส้นฐานสีฟ้า
+let routeSimBaseLine = w.L.polyline(route.latlngs, {
+  color: '#0ea5e9',
+  weight: 8,
+  opacity: 0.65,
+  lineCap: 'round',
+  lineJoin: 'round',
+  className: 'route-sim-glow'
+}).addTo(aiMap);
 
-    let routeSimFlowLine = w.L.polyline(
-      route.latlngs,
-      {
-        color: '#e0f2fe',
-        weight: 4,
-        opacity: 1,
-        dashArray: '10,18',
-        lineCap: 'round',
-        lineJoin: 'round',
-        className: 'route-sim-flow'
-      }
-    ).addTo(aiMap);
+// ✅ เส้นไฟวิ่งด้านบน
+let routeSimFlowLine = w.L.polyline(route.latlngs, {
+  color: '#e0f2fe',
+  weight: 4,
+  opacity: 1,
+  dashArray: '10, 18',
+  lineCap: 'round',
+  lineJoin: 'round',
+  className: 'route-sim-flow'
+}).addTo(aiMap);
 
-    routeSimLines.push(routeSimBaseLine);
-    routeSimLines.push(routeSimFlowLine);
+routeSimLines.push(routeSimBaseLine);
+routeSimLines.push(routeSimFlowLine);
 
-    routeSimLine = routeSimBaseLine;
+// ใช้ routeSimLine อ้างอิง bounds
+routeSimLine = routeSimBaseLine;
 
-    (route.legs || []).forEach((leg) => {
-      let startPoint = routeSimPoints[leg.index];
-      let endPoint = routeSimPoints[leg.index + 1];
+(route.legs || []).forEach((leg) => {
+  let startPoint = routeSimPoints[leg.index];
+  let endPoint = routeSimPoints[leg.index + 1];
 
-      if (!startPoint || !endPoint) {
-        return;
-      }
+  if (!startPoint || !endPoint) {
+    return;
+  }
 
-      let fromJb = formatRouteLabelJobId(
-        getRouteSimPointJobId(startPoint, leg.from)
-      );
+  let fromJb = formatRouteLabelJobId(
+  getRouteSimPointJobId(startPoint, leg.from)
+);
 
-      let toJb = formatRouteLabelJobId(
-        getRouteSimPointJobId(endPoint, leg.to)
-      );
+let toJb = formatRouteLabelJobId(
+  getRouteSimPointJobId(endPoint, leg.to)
+);
 
-      let mid = [
-        (Number(startPoint.lat) + Number(endPoint.lat)) / 2,
-        (Number(startPoint.lng) + Number(endPoint.lng)) / 2
-      ];
+  let mid = [
+    (Number(startPoint.lat) + Number(endPoint.lat)) / 2,
+    (Number(startPoint.lng) + Number(endPoint.lng)) / 2
+  ];
 
-      let label = w.L.marker(mid, {
-        icon: w.L.divIcon({
-          className: '',
-          html: `
-            <div style="
-              background:#020617;
-              color:#bae6fd;
-              padding:7px 11px;
-              border-radius:14px;
-              font-weight:900;
-              border:1px solid #38bdf8;
-              box-shadow:0 0 12px rgba(56,189,248,.7);
-              white-space:nowrap;
-              font-family:Arial;
-              font-size:12px;
-              text-align:center;
-              line-height:1.45;
-            ">
-              📋 ${fromJb} → ${toJb}<br>
-              🛣️ ${Number(leg.distanceKm || 0).toFixed(2)} km |
-              ⏱ ${Number(leg.durationMin || 0).toFixed(0)} min
-            </div>
-          `,
-          iconSize: [220, 46],
-          iconAnchor: [110, 23]
-        })
-      }).addTo(aiMap);
+  let label = w.L.marker(mid, {
+    icon: w.L.divIcon({
+      className: '',
+      html: `
+  <div style="
+    background:#020617;
+    color:#bae6fd;
+    padding:7px 11px;
+    border-radius:14px;
+    font-weight:900;
+    border:1px solid #38bdf8;
+    box-shadow:0 0 12px rgba(56,189,248,.7);
+    white-space:nowrap;
+    font-family:Arial;
+    font-size:12px;
+    text-align:center;
+    line-height:1.45;
+  ">
+  📋 ${fromJb} → ${toJb}<br>
+🛣️ ${leg.distanceKm.toFixed(2)} km | ⏱ ${leg.durationMin.toFixed(0)} min
+  </div>
+`,
+iconSize: [220, 46],
+iconAnchor: [110, 23],
+    }),
+  }).addTo(aiMap);
 
-      routeSimMarkers.push(label);
-    });
+  routeSimMarkers.push(label);
+});
 
-    aiMap.fitBounds(routeSimBaseLine.getBounds(), {
-      padding: [60, 60]
+    aiMap.fitBounds(routeSimLine.getBounds(), {
+      padding: [60, 60],
     });
   } catch (err) {
     console.warn('Route simulator failed:', err);
-
-    drawRouteSimulatorFallback(points);
+    drawRouteSimulatorFallback(start, end);
   }
 }
 
-function drawRouteSimulatorFallback(points) {
-  if (
-    !aiMap ||
-    !Array.isArray(points) ||
-    points.length < 2
-  ) {
-    console.warn(
-      'Route Simulator fallback มีพิกัดไม่ครบ:',
-      points
-    );
-    return;
-  }
+function drawRouteSimulatorFallback(start, end) {
+  let fallbackBaseLine = w.L.polyline([start, end], {
+  color: '#0ea5e9',
+  weight: 7,
+  opacity: 0.6,
+  dashArray: '8,8',
+  lineCap: 'round',
+  lineJoin: 'round',
+  className: 'route-sim-glow'
+}).addTo(aiMap);
 
-  let validPoints = points
-    .map((point) => {
-      if (
-        Array.isArray(point) &&
-        point.length === 2
-      ) {
-        let lat = Number(point[0]);
-        let lng = Number(point[1]);
+let fallbackFlowLine = w.L.polyline([start, end], {
+  color: '#e0f2fe',
+  weight: 4,
+  opacity: 1,
+  dashArray: '8,16',
+  lineCap: 'round',
+  lineJoin: 'round',
+  className: 'route-sim-flow'
+}).addTo(aiMap);
 
-        if (!isNaN(lat) && !isNaN(lng)) {
-          return [lat, lng];
-        }
-      }
+routeSimLines.push(fallbackBaseLine);
+routeSimLines.push(fallbackFlowLine);
 
-      if (
-        point &&
-        !isNaN(Number(point.lat)) &&
-        !isNaN(Number(point.lng))
-      ) {
-        return [
-          Number(point.lat),
-          Number(point.lng)
-        ];
-      }
+routeSimLine = fallbackBaseLine;
 
-      return null;
-    })
-    .filter(Boolean);
-
-  if (validPoints.length < 2) {
-    console.warn(
-      'Route Simulator fallback ไม่มีพิกัดที่ใช้ได้:',
-      validPoints
-    );
-    return;
-  }
-
-  let fallbackBaseLine = w.L.polyline(
-    validPoints,
-    {
-      color: '#0ea5e9',
-      weight: 7,
-      opacity: 0.6,
-      dashArray: '8,8',
-      lineCap: 'round',
-      lineJoin: 'round',
-      className: 'route-sim-glow'
-    }
-  ).addTo(aiMap);
-
-  let fallbackFlowLine = w.L.polyline(
-    validPoints,
-    {
-      color: '#e0f2fe',
-      weight: 4,
-      opacity: 1,
-      dashArray: '8,16',
-      lineCap: 'round',
-      lineJoin: 'round',
-      className: 'route-sim-flow'
-    }
-  ).addTo(aiMap);
-
-  routeSimLines.push(fallbackBaseLine);
-  routeSimLines.push(fallbackFlowLine);
-
-  routeSimLine = fallbackBaseLine;
-
-  let totalKm = 0;
-
-  for (let i = 1; i < validPoints.length; i++) {
-    totalKm += distanceKm(
-      validPoints[i - 1][0],
-      validPoints[i - 1][1],
-      validPoints[i][0],
-      validPoints[i][1]
-    );
-  }
-
-  let firstPoint = validPoints[0];
-  let lastPoint = validPoints[validPoints.length - 1];
+  let km = distanceKm(
+    start[0],
+    start[1],
+    end[0],
+    end[1]
+  );
 
   let mid = [
-    (firstPoint[0] + lastPoint[0]) / 2,
-    (firstPoint[1] + lastPoint[1]) / 2
+    (start[0] + end[0]) / 2,
+    (start[1] + end[1]) / 2
   ];
 
   routeSimLabel = w.L.marker(mid, {
@@ -5365,34 +4547,51 @@ function drawRouteSimulatorFallback(points) {
           font-family:Arial;
           font-size:12px;
           text-align:center;
-          line-height:1.45;
         ">
           🧭 Route Simulator<br>
-          📏 ${totalKm.toFixed(2)} km<br>
-          <span style="
-            color:#94a3b8;
-            font-size:10px;
-          ">
-            เส้นตรงสำรอง เนื่องจาก Routing ไม่ตอบ
-          </span>
+          📏 ${km.toFixed(2)} km
         </div>
       `,
-      iconSize: [210, 62],
-      iconAnchor: [105, 31]
-    })
+      iconSize: [150, 44],
+      iconAnchor: [75, 22],
+    }),
   }).addTo(aiMap);
 
-  aiMap.fitBounds(fallbackBaseLine.getBounds(), {
-    padding: [60, 60]
+  aiMap.fitBounds([start, end], {
+    padding: [60, 60],
   });
 }
 
 function clearRouteSimulator() {
-  clearRouteSimulatorLayers();
+  if (routeSimLine) {
+    aiMap.removeLayer(routeSimLine);
+    routeSimLine = null;
+  }
 
+  routeSimLines.forEach((line) => {
+    aiMap.removeLayer(line);
+  });
+
+  routeSimLines = [];
+
+  if (routeSimLabel) {
+    aiMap.removeLayer(routeSimLabel);
+    routeSimLabel = null;
+  }
+  routeSimMarkers.forEach((m) => {
+  aiMap.removeLayer(m);
+});
+
+routeSimMarkers = [];
+
+  routeSimMarkers.forEach((m) => {
+    aiMap.removeLayer(m);
+  });
+
+  routeSimMarkers = [];
   routeSimPoints = [];
+  routeSimLabel = null;
 }
-
         async function drawDistanceMeasure() {
           if (measureLine) {
             aiMap.removeLayer(measureLine);
@@ -5458,7 +4657,6 @@ function clearRouteSimulator() {
             alert('Routing error: ไม่สามารถดึงเส้นทางจาก OSRM ได้');
           }
         }
-        
         async function getRoadRouteFromOSRM(points) {
           if (!points || points.length < 2) {
             return null;
@@ -5678,13 +4876,6 @@ return {
       return '📍 Source: GPS in Title';
     }
 
-    if (group.source === 'SPECIAL_SITE') {
-  return (
-    '🏢 Source: INF / IPV / BIPV / INL' +
-    (group.siteName ? ' - ' + escapeHtml(group.siteName) : '')
-  );
-}
-
     if (group.source === 'SITE_SHEET') {
       return (
         '📡 Source: OLT / ME / MME Sheet' +
@@ -5731,13 +4922,11 @@ let gmapUrl =
       let district = job['District Name'] || '-';
 
       let coordSource =
-  group.source === 'GPS_TITLE'
-    ? '📍 GPS from Title'
-    : group.source === 'SPECIAL_SITE'
-    ? `🏢 ${group.siteName || 'INF / IPV / BIPV / INL'} Coordinate`
-    : group.source === 'SITE_SHEET'
-    ? '📡 Site Coordinate'
-    : '🗺️ Area Coordinate';
+        group.source === 'GPS_TITLE'
+          ? '📍 GPS from Title'
+          : group.source === 'SITE_SHEET'
+          ? '📡 Site Coordinate'
+          : '🗺️ Area Coordinate';
 
       return `
         <details class="map-job-box">
@@ -6130,8 +5319,6 @@ if (!w.__engineerRouteDropdownOutsideClickBound) {
   w.__engineerRouteDropdownOutsideClickBound = true;
 }
 
-
-
 function buildOnsiteEngineerSelect() {
   let list = w.document.getElementById('onsiteEngineerDropdownList');
   let labelEl = w.document.getElementById('onsiteEngineerDropdownLabel');
@@ -6147,11 +5334,10 @@ function buildOnsiteEngineerSelect() {
       let province = job['Province Name'] || '';
 
       return (
-  assign &&
-  isOnsiteStatus(status) &&
-  isMatchSelectedProvince(province) &&
-  isMatchTopSearchProvinceGroup(province)
-);
+        assign &&
+        isOnsiteStatus(status) &&
+        isMatchSelectedProvince(province)
+      );
     })
     .sort((a, b) => {
       return new Date(b['Create Time'] || 0) - new Date(a['Create Time'] || 0);
@@ -6178,12 +5364,9 @@ function buildOnsiteEngineerSelect() {
 
     if (!item || !item.assign) return;
 
-    if (
-  !isMatchSelectedProvince(item.province) ||
-  !isMatchTopSearchProvinceGroup(item.province)
-) {
-  return;
-}
+    if (!isMatchSelectedProvince(item.province)) {
+      return;
+    }
 
     let assign = String(item.assign || '').trim();
     let normKey = assign.toLowerCase();
@@ -6272,11 +5455,10 @@ function buildDepartedEngineerSelect() {
       let province = job['Province Name'] || '';
 
       return (
-  assign &&
-  isDepartedStatus(status) &&
-  isMatchSelectedProvince(province) &&
-  isMatchTopSearchProvinceGroup(province)
-);
+        assign &&
+        isDepartedStatus(status) &&
+        isMatchSelectedProvince(province)
+      );
     })
     .sort((a, b) => {
       return new Date(b['Create Time'] || 0) - new Date(a['Create Time'] || 0);
@@ -6379,13 +5561,7 @@ function updateDistrictSourceButton() {
 
             let gps = extractGPS(title);
 
-let specialCoord = !gps
-  ? findSpecialSiteCoordFromTitle(title)
-  : null;
-
-let siteCoord = !gps && !specialCoord
-  ? findSiteCoordFromTitle(title)
-  : null;
+let siteCoord = !gps ? findSiteCoordFromTitle(title) : null;
 
 let key = '';
 let source = 'AREA_COORD';
@@ -6394,10 +5570,6 @@ let siteName = '';
 if (gps) {
   key = `GPS|${lat.toFixed(5)}|${lng.toFixed(5)}`;
   source = 'GPS_TITLE';
-} else if (specialCoord) {
-  key = `SPECIAL|${specialCoord.key}`;
-  source = 'SPECIAL_SITE';
-  siteName = specialCoord.key;
 } else if (siteCoord) {
   key = `SITE|${siteCoord.key}`;
   source = 'SITE_SHEET';
@@ -6409,15 +5581,14 @@ if (gps) {
 
 if (!groups[key]) {
   groups[key] = {
-    lat: lat,
-    lng: lng,
+    lat,
+    lng,
     jobs: [],
     source: source,
     siteName: siteName
   };
 }
-
-groups[key].jobs.push(job);
+            groups[key].jobs.push(job);
           }
 
           let groupList = Object.values(groups);
@@ -6456,7 +5627,7 @@ updateDistrictSourceButton();
               group._offsetIndex || 0,
               group._offsetTotal || 1
             );
-            
+
             let marker = w.L.marker(displayCoord, {
   icon: makeMapIcon(mainJob),
 })
@@ -6543,8 +5714,6 @@ group.jobs.forEach((job) => {
   let key = String(name || '').toLowerCase().trim();
 
   if (!key) return;
-  w.currentNearbyEngineerKey = key;
-w.currentNearbyEngineerName = name || '';
 
   // ✅ 1. หา On-site ปัจจุบันจาก marker index ก่อน
   let item = onsiteEngineerIndex[key];
@@ -6649,9 +5818,6 @@ w.focusDepartedEngineer = async function (name) {
 
   if (!key) return;
 
-  w.currentNearbyEngineerKey = key;
-w.currentNearbyEngineerName = name || '';
-
   let item = departedEngineerIndex[key];
 
   if (!item) {
@@ -6686,1459 +5852,7 @@ w.currentNearbyEngineerName = name || '';
   }, 350);
 };
 
-function getCurrentNearbyEngineerLocation() {
-  let key = String(w.currentNearbyEngineerKey || w.selectedEngineer || '')
-    .toLowerCase()
-    .trim();
 
-  if (!key) {
-    return null;
-  }
-
-  let onsiteItem = onsiteEngineerIndex && onsiteEngineerIndex[key];
-
-  if (onsiteItem) {
-    let coord =
-      onsiteItem.coord ||
-      (
-        onsiteItem.group &&
-        !isNaN(Number(onsiteItem.group.lat)) &&
-        !isNaN(Number(onsiteItem.group.lng))
-          ? [Number(onsiteItem.group.lat), Number(onsiteItem.group.lng)]
-          : null
-      );
-
-    if (coord) {
-      return {
-        key: key,
-        name: onsiteItem.assign || w.currentNearbyEngineerName || key,
-        coord: coord,
-        source: 'CURRENT_ONSITE',
-        jobId: onsiteItem.job ? onsiteItem.job['Job ID'] || '' : ''
-      };
-    }
-  }
-
-  let departedItem = departedEngineerIndex && departedEngineerIndex[key];
-
-  if (departedItem) {
-    let coord =
-      departedItem.coord ||
-      (
-        departedItem.group &&
-        !isNaN(Number(departedItem.group.lat)) &&
-        !isNaN(Number(departedItem.group.lng))
-          ? [Number(departedItem.group.lat), Number(departedItem.group.lng)]
-          : null
-      );
-
-    if (coord) {
-      return {
-        key: key,
-        name: departedItem.assign || w.currentNearbyEngineerName || key,
-        coord: coord,
-        source: 'DEPARTED',
-        jobId: departedItem.job ? departedItem.job['Job ID'] || '' : ''
-      };
-    }
-  }
-
-  let history = TRAVEL_HISTORY && TRAVEL_HISTORY[key];
-
-  if (
-    history &&
-    !isNaN(Number(history.lat)) &&
-    !isNaN(Number(history.lng))
-  ) {
-    return {
-      key: key,
-      name: history.assign || w.currentNearbyEngineerName || key,
-      coord: [Number(history.lat), Number(history.lng)],
-      source: 'TRAVEL_HISTORY',
-      jobId: history.jobId || ''
-    };
-  }
-
-  return null;
-}
-
-function clearNearbyJobHighlights() {
-  nearbyJobMarkers.forEach((m) => {
-    if (aiMap && aiMap.hasLayer(m)) {
-      aiMap.removeLayer(m);
-    }
-  });
-
-  nearbyJobLines.forEach((line) => {
-    if (aiMap && aiMap.hasLayer(line)) {
-      aiMap.removeLayer(line);
-    }
-  });
-
-  if (aiMap) {
-    aiMap.eachLayer((layer) => {
-      if (layer && layer.options && layer.options.nearbyJobLayer) {
-        aiMap.removeLayer(layer);
-      }
-    });
-  }
-
-  nearbyJobMarkers = [];
-  nearbyJobLines = [];
-}
-
-function offsetNearbyJobMarkerCoord(coord, index, total) {
-  if (!coord || coord.length !== 2) return coord;
-
-  let lat = Number(coord[0]);
-  let lng = Number(coord[1]);
-
-  if (isNaN(lat) || isNaN(lng)) return coord;
-
-  let radiusMeters = 45;
-  let angle = (2 * Math.PI * index) / Math.max(total, 1);
-
-  let earth = 6378137;
-
-  let dLat = (radiusMeters * Math.cos(angle)) / earth;
-  let dLng =
-    (radiusMeters * Math.sin(angle)) /
-    (earth * Math.cos((Math.PI * lat) / 180));
-
-  let newLat = lat + (dLat * 180) / Math.PI;
-  let newLng = lng + (dLng * 180) / Math.PI;
-
-  return [newLat, newLng];
-}
-
-function drawNearbyJobHighlights(engineer, topJobs) {
-  if (!aiMap || !engineer || !engineer.coord || !topJobs || !topJobs.length) {
-    return;
-  }
-
-  clearNearbyJobHighlights();
-
-  let bounds = [];
-
-  bounds.push(engineer.coord);
-
-  topJobs.forEach((item, idx) => {
-  let job = item.job;
-  let coord = item.coord;
-
-  if (!coord) return;
-
-  let rank = idx + 1;
-  let jobCount = item.count || (item.jobs ? item.jobs.length : 1);
-  
-
-  let displayCoord = coord;
-
-bounds.push(displayCoord);
-
-if (!aiMap.getPane('nearbyJobLinePane')) {
-  aiMap.createPane('nearbyJobLinePane');
-  aiMap.getPane('nearbyJobLinePane').style.zIndex = 430;
-}
-
-if (!aiMap.getPane('nearbyJobLinePane')) {
-  aiMap.createPane('nearbyJobLinePane');
-  aiMap.getPane('nearbyJobLinePane').style.zIndex = 430;
-}
-
-let baseLine = w.L.polyline(
-  [
-    engineer.coord,
-    displayCoord
-  ],
-  {
-    pane: 'nearbyJobLinePane',
-    color: '#0284c7',
-    weight: 7,
-    opacity: 0.45,
-    lineCap: 'round',
-    lineJoin: 'round',
-    className: 'nearby-glow-line',
-    nearbyJobLayer: true
-  }
-).addTo(aiMap);
-
-let flowLine = w.L.polyline(
-  [
-    engineer.coord,
-    displayCoord
-  ],
-  {
-    pane: 'nearbyJobLinePane',
-    color: '#e0f2fe',
-    weight: 3,
-    opacity: 1,
-    dashArray: '10,18',
-    lineCap: 'round',
-    lineJoin: 'round',
-    className: 'nearby-flow-line',
-    nearbyJobLayer: true
-  }
-).addTo(aiMap);
-
-nearbyJobLines.push(baseLine);
-nearbyJobLines.push(flowLine);
-
-  if (!aiMap.getPane('nearbyJobMarkerPane')) {
-  aiMap.createPane('nearbyJobMarkerPane');
-  aiMap.getPane('nearbyJobMarkerPane').style.zIndex = 680;
-}
-
-let marker = w.L.marker(displayCoord, {
-  pane: 'nearbyJobMarkerPane',
-  zIndexOffset: 10000,
-  nearbyJobLayer: true,
-  icon: w.L.divIcon({
-      className: '',
-      html: `
-        <div style="
-          position:relative;
-          width:28px;
-          height:28px;
-          border-radius:50%;
-          background:#7c3aed;
-          color:white;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          font-weight:900;
-          font-size:12px;
-          border:3px solid #ffffff;
-          box-shadow:0 0 14px rgba(124,58,237,.9);
-          font-family:Arial;
-        ">
-          ${rank}
-
-          ${
-            jobCount > 1
-              ? `
-                <div style="
-                  position:absolute;
-                  top:-9px;
-                  right:-10px;
-                  min-width:17px;
-                  height:17px;
-                  padding:0 4px;
-                  border-radius:999px;
-                  background:#f97316;
-                  color:white;
-                  border:2px solid white;
-                  font-size:10px;
-                  font-weight:900;
-                  display:flex;
-                  align-items:center;
-                  justify-content:center;
-                  line-height:1;
-                ">
-                  ${jobCount}
-                </div>
-              `
-              : ''
-          }
-        </div>
-      `,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-      popupAnchor: [0, -16]
-    })
-  }).addTo(aiMap);
-
-  let groupItems = item.items || [];
-
-if (!groupItems.length && item.jobs && item.jobs.length) {
-  groupItems = item.jobs.map((j) => {
-    return {
-      job: j,
-      dist: item.dist
-    };
-  });
-}
-
-if (!groupItems.length && item.job) {
-  groupItems = [
-    {
-      job: item.job,
-      dist: item.dist
-    }
-  ];
-}
-
-let groupJobsHtml = groupItems
-  .map((groupItem, jobIdx) => {
-    let groupJob = groupItem.job || {};
-
-    return `
-      <div style="
-        border-top:${jobIdx === 0 ? 'none' : '1px solid #e5e7eb'};
-        padding-top:${jobIdx === 0 ? '0' : '8px'};
-        margin-top:${jobIdx === 0 ? '0' : '8px'};
-      ">
-        <b>${jobIdx + 1}. ${groupJob['Job ID'] || '-'}</b><br>
-        ${Number(groupItem.dist || item.dist || 0).toFixed(2)} km<br>
-        Priority: ${groupJob['Priority'] || '-'}<br>
-        Status: ${groupJob['Status'] || '-'}<br>
-        ${groupJob['Province Name'] || '-'} / ${groupJob['District Name'] || '-'}<br>
-        ${String(groupJob['Job Title'] || '-').slice(0, 90)}
-      </div>
-    `;
-  })
-  .join('');
-
-
-  marker.bindPopup(`
-  <div style="color:#111;font-family:Arial;min-width:260px;max-width:340px">
-    <b>🔎 Nearby Job #${rank}</b><br>
-    ตำแหน่งนี้มี ${jobCount} Job${jobCount > 1 ? 's' : ''}<br><br>
-
-    <div style="
-      max-height:260px;
-      overflow-y:auto;
-      padding-right:6px;
-    ">
-      ${groupJobsHtml}
-    </div>
-
-    <br>
-
-    <button
-      onclick="window.removeNearbyJobByRank(${idx})"
-      style="
-        background:#dc2626;
-        color:white;
-        border:none;
-        border-radius:8px;
-        padding:6px 10px;
-        font-weight:bold;
-        cursor:pointer;
-      "
-    >
-      🗑️ ลบกลุ่มนี้ออกจาก Nearby
-    </button>
-  </div>
-`);
-
-    nearbyJobMarkers.push(marker);
-  });
-
-  if (bounds.length > 1) {
-    aiMap.fitBounds(bounds, {
-      padding: [70, 70]
-    });
-  }
-}
-
-function groupNearbyJobsByLocation(candidates) {
-  let groups = [];
-
-  candidates.forEach((item) => {
-    if (!item || !item.coord) return;
-
-    let foundGroup = null;
-
-    for (const group of groups) {
-      let d = distanceKm(
-        group.coord[0],
-        group.coord[1],
-        item.coord[0],
-        item.coord[1]
-      );
-
-      if (d <= 0.05) {
-        foundGroup = group;
-        break;
-      }
-    }
-
-    if (foundGroup) {
-      foundGroup.jobs.push(item.job);
-      foundGroup.items.push(item);
-
-      if (item.dist < foundGroup.dist) {
-        foundGroup.mainJob = item.job;
-        foundGroup.dist = item.dist;
-        foundGroup.coord = item.coord;
-      }
-    } else {
-      groups.push({
-        mainJob: item.job,
-        job: item.job,
-        jobs: [item.job],
-        items: [item],
-        coord: item.coord,
-        dist: item.dist,
-        count: 1
-      });
-    }
-  });
-
-  groups.forEach((group) => {
-    group.count = group.jobs.length;
-  });
-
-  groups.sort((a, b) => a.dist - b.dist);
-
-  return groups;
-}
-
-let engineerJobScanMarkers = [];
-let engineerJobScanLines = [];
-const ENGINEER_JOB_NEAR_LIMIT_KM = 20;
-const ENGINEER_JOB_MIDDLE_LIMIT_KM = 50;
-
-function getEngineerJobDistanceInfo(distanceKmValue) {
-  let distance = Number(distanceKmValue);
-
-  if (isNaN(distance)) {
-    distance = 0;
-  }
-
-  if (distance <= ENGINEER_JOB_NEAR_LIMIT_KM) {
-    return {
-      key: 'near',
-      text: 'ใกล้',
-      color: '#22c55e',
-      lightColor: '#bbf7d0',
-      glowColor: 'rgba(34,197,94,.85)'
-    };
-  }
-
-  if (distance <= ENGINEER_JOB_MIDDLE_LIMIT_KM) {
-    return {
-      key: 'middle',
-      text: 'ระยะกลาง',
-      color: '#f97316',
-      lightColor: '#fed7aa',
-      glowColor: 'rgba(249,115,22,.85)'
-    };
-  }
-
-  return {
-    key: 'far',
-    text: 'ไกล',
-    color: '#dc2626',
-    lightColor: '#fecaca',
-    glowColor: 'rgba(220,38,38,.85)'
-  };
-}
-
-function clearEngineerJobScan() {
-  engineerJobScanMarkers.forEach((marker) => {
-    if (aiMap && aiMap.hasLayer(marker)) {
-      aiMap.removeLayer(marker);
-    }
-  });
-
-  engineerJobScanLines.forEach((line) => {
-    if (aiMap && aiMap.hasLayer(line)) {
-      aiMap.removeLayer(line);
-    }
-  });
-
-    engineerJobScanMarkers = [];
-    engineerJobScanLines = [];
-}
-
-w.clearEngineerJobScan = clearEngineerJobScan;
-
-function drawEngineerJobScan(engineer, groups) {
-  if (
-    !aiMap ||
-    !engineer ||
-    !engineer.coord ||
-    !Array.isArray(groups) ||
-    !groups.length
-  ) {
-    return;
-  }
-
-  clearEngineerJobScan();
-
-  if (!aiMap.getPane('engineerJobScanLinePane')) {
-    aiMap.createPane('engineerJobScanLinePane');
-    aiMap.getPane('engineerJobScanLinePane').style.zIndex = 440;
-    aiMap.getPane('engineerJobScanLinePane').style.pointerEvents = 'none';
-  }
-
-  if (!aiMap.getPane('engineerJobScanMarkerPane')) {
-    aiMap.createPane('engineerJobScanMarkerPane');
-    aiMap.getPane('engineerJobScanMarkerPane').style.zIndex = 690;
-  }
-
-  let bounds = [engineer.coord];
-
-  groups.forEach((item, idx) => {
-    if (!item || !item.coord) {
-      return;
-    }
-
-    let rank = idx + 1;
-    let jobCount =
-      item.count ||
-      (Array.isArray(item.jobs) ? item.jobs.length : 1);
-
-    let distanceInfo = getEngineerJobDistanceInfo(item.dist);
-    let displayCoord = item.coord;
-
-    bounds.push(displayCoord);
-
-    let baseLine = w.L.polyline(
-      [engineer.coord, displayCoord],
-      {
-        pane: 'engineerJobScanLinePane',
-        color: distanceInfo.color,
-        weight: 7,
-        opacity: 0.5,
-        lineCap: 'round',
-        lineJoin: 'round',
-        className: 'engineer-job-scan-glow'
-      }
-    ).addTo(aiMap);
-
-    let flowLine = w.L.polyline(
-      [engineer.coord, displayCoord],
-      {
-        pane: 'engineerJobScanLinePane',
-        color: distanceInfo.lightColor,
-        weight: 3,
-        opacity: 1,
-        dashArray: '10,18',
-        lineCap: 'round',
-        lineJoin: 'round',
-        className: 'engineer-job-scan-flow'
-      }
-    ).addTo(aiMap);
-
-    engineerJobScanLines.push(baseLine);
-    engineerJobScanLines.push(flowLine);
-
-    let groupItems = Array.isArray(item.items)
-      ? item.items
-      : [];
-
-    if (!groupItems.length && Array.isArray(item.jobs)) {
-      groupItems = item.jobs.map((job) => {
-        return {
-          job: job,
-          dist: item.dist
-        };
-      });
-    }
-
-    let jobsHtml = groupItems
-      .map((groupItem, jobIndex) => {
-        let job = groupItem.job || {};
-
-        return `
-          <div style="
-            border-top:${
-              jobIndex === 0
-                ? 'none'
-                : '1px solid #e5e7eb'
-            };
-            margin-top:${jobIndex === 0 ? '0' : '8px'};
-            padding-top:${jobIndex === 0 ? '0' : '8px'};
-          ">
-            <b>${jobIndex + 1}. ${job['Job ID'] || '-'}</b><br>
-            Priority: ${job['Priority'] || '-'}<br>
-            Status: ${job['Status'] || '-'}<br>
-            ${job['Province Name'] || '-'} /
-            ${job['District Name'] || '-'}<br>
-            ${String(job['Job Title'] || '-').slice(0, 100)}
-          </div>
-        `;
-      })
-      .join('');
-
-    let marker = w.L.marker(displayCoord, {
-      pane: 'engineerJobScanMarkerPane',
-      zIndexOffset: 11000,
-      icon: w.L.divIcon({
-        className: '',
-        html: `
-          <div style="
-            position:relative;
-            width:34px;
-            height:34px;
-            border-radius:50%;
-            background:${distanceInfo.color};
-            color:#ffffff;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            border:3px solid #ffffff;
-            font-family:Arial;
-            font-size:14px;
-            font-weight:900;
-            box-shadow:0 0 16px ${distanceInfo.glowColor};
-          ">
-            ${rank}
-
-            ${
-              jobCount > 1
-                ? `
-                  <div style="
-                    position:absolute;
-                    top:-10px;
-                    right:-11px;
-                    min-width:18px;
-                    height:18px;
-                    padding:0 4px;
-                    border-radius:999px;
-                    background:#0f172a;
-                    color:#ffffff;
-                    border:2px solid #ffffff;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    font-size:10px;
-                    font-weight:900;
-                  ">
-                    ${jobCount}
-                  </div>
-                `
-                : ''
-            }
-          </div>
-        `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
-        popupAnchor: [0, -18]
-      })
-    }).addTo(aiMap);
-
-    marker.bindPopup(`
-      <div style="
-        color:#111827;
-        font-family:Arial;
-        min-width:270px;
-        max-width:360px;
-      ">
-        <b>🧑‍🔧 Engineer Job #${rank}</b><br>
-        ช่าง: ${engineer.name || '-'}<br>
-        ระยะทาง: ${Number(item.dist || 0).toFixed(2)} km<br>
-        ระดับ:
-        <b style="color:${distanceInfo.color}">
-          ${distanceInfo.text}
-        </b><br>
-        ตำแหน่งนี้มี ${jobCount} Job<br><br>
-
-        <div style="
-          max-height:280px;
-          overflow-y:auto;
-          padding-right:6px;
-        ">
-          ${jobsHtml}
-        </div>
-      </div>
-    `);
-
-    engineerJobScanMarkers.push(marker);
-  });
-
-  if (bounds.length > 1) {
-    aiMap.fitBounds(bounds, {
-      padding: [70, 70]
-    });
-  }
-}
-
-function parseCoordinateInput(value) {
-  let text = String(value || '').trim();
-
-  if (!text) {
-    return null;
-  }
-
-  text = text.replace(/\s+/g, '');
-
-  let parts = text.split(',');
-
-  if (parts.length !== 2) {
-    return null;
-  }
-
-  let lat = Number(parts[0]);
-  let lng = Number(parts[1]);
-
-  if (
-    isNaN(lat) ||
-    isNaN(lng) ||
-    lat < -90 ||
-    lat > 90 ||
-    lng < -180 ||
-    lng > 180
-  ) {
-    return null;
-  }
-
-  return [lat, lng];
-}
-
-function clearCoordinateSearchMarker() {
-  if (coordinateSearchMarker && aiMap && aiMap.hasLayer(coordinateSearchMarker)) {
-    aiMap.removeLayer(coordinateSearchMarker);
-  }
-
-  coordinateSearchMarker = null;
-}
-
-
-w.openCoordinateJobScanner = function () {
-  let old = w.document.getElementById('coordinateJobScannerBox');
-
-  if (old) {
-    old.remove();
-  }
-
-  let box = w.document.createElement('div');
-
-  box.id = 'coordinateJobScannerBox';
-
-  box.innerHTML = `
-    <div style="
-      position:fixed;
-      inset:0;
-      background:rgba(2,6,23,.65);
-      z-index:999999;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-family:Arial;
-    ">
-      <div style="
-        width:min(460px,90vw);
-        background:#020617;
-        color:#e5e7eb;
-        border:1px solid #334155;
-        border-radius:18px;
-        box-shadow:0 20px 60px rgba(0,0,0,.55);
-        padding:20px;
-      ">
-        <div style="
-          font-size:20px;
-          font-weight:900;
-          margin-bottom:12px;
-          color:#a78bfa;
-        ">
-          📍 Search by Coordinate
-        </div>
-
-        <div style="
-          font-size:13px;
-          color:#cbd5e1;
-          line-height:1.5;
-          margin-bottom:12px;
-        ">
-        ใส่พิกัด Lat,Lng หรือเลข Job ID<br>
-ตัวอย่าง: 14.974321,102.083456 หรือ JB26-1731605
-        </div>
-
-        <input
-          id="coordinateJobScannerInput"
-          type="text"
-          placeholder="14.974321,102.083456 หรือ JB26-1731605"
-          style="
-            width:100%;
-            height:42px;
-            background:#0f172a;
-            color:#ffffff;
-            border:1px solid #334155;
-            border-radius:12px;
-            padding:0 12px;
-            outline:none;
-            font-weight:800;
-            box-sizing:border-box;
-            margin-bottom:16px;
-          "
-        >
-
-        <div style="
-          display:flex;
-          justify-content:flex-end;
-          gap:10px;
-        ">
-          <button
-            onclick="document.getElementById('coordinateJobScannerBox').remove()"
-            style="
-              background:#334155;
-              color:white;
-              border:none;
-              border-radius:12px;
-              padding:9px 16px;
-              font-weight:800;
-              cursor:pointer;
-            "
-          >
-            Cancel
-          </button>
-
-          <button
-            onclick="window.runCoordinateJobScanner()"
-            style="
-              background:#7c3aed;
-              color:white;
-              border:none;
-              border-radius:12px;
-              padding:9px 16px;
-              font-weight:900;
-              cursor:pointer;
-            "
-          >
-            Scan
-          </button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  w.document.body.appendChild(box);
-
-  let input = w.document.getElementById('coordinateJobScannerInput');
-
-  if (input) {
-    setTimeout(() => input.focus(), 50);
-  }
-};
-
-function findJobByIdForCoordinateSearch(value) {
-  let q = String(value || '').trim().toLowerCase();
-
-  if (!q) return null;
-
-  let qDigits = q.replace(/[^\d]/g, '');
-
-  return jobs.find((job) => {
-    let jobId = String(job['Job ID'] || '').trim().toLowerCase();
-    let jobDigits = jobId.replace(/[^\d]/g, '');
-
-    return (
-      jobId === q ||
-      jobId.includes(q) ||
-      (qDigits && jobDigits.endsWith(qDigits))
-    );
-  }) || null;
-}
-
-w.runCoordinateJobScanner = async function () {
-  let input = w.document.getElementById('coordinateJobScannerInput');
-  let rawValue = input ? input.value : '';
-
-  let coord = parseCoordinateInput(rawValue);
-  let referenceJob = null;
-  let referenceLabel = 'COORDINATE';
-
-  if (!coord) {
-    referenceJob = findJobByIdForCoordinateSearch(rawValue);
-
-    if (referenceJob) {
-      coord = await getJobCoord(referenceJob);
-
-      if (!coord) {
-        w.showAIOperationsNotice(
-          'ไม่พบพิกัดของ Job',
-          'พบเลข Job นี้ แต่ไม่พบพิกัดสำหรับแสดงบนแผนที่\n\nJob ID: ' +
-            (referenceJob['Job ID'] || '-')
-        );
-        return;
-      }
-
-      referenceLabel = 'JOB: ' + (referenceJob['Job ID'] || '-');
-
-      let box = w.document.getElementById('coordinateJobScannerBox');
-
-      if (box) {
-        box.remove();
-      }
-
-      clearNearbyJobHighlights();
-
-      if (coordinateSearchMarker && aiMap.hasLayer(coordinateSearchMarker)) {
-        aiMap.removeLayer(coordinateSearchMarker);
-        coordinateSearchMarker = null;
-      }
-
-      coordinateSearchMarker = w.L.marker(coord, {
-        zIndexOffset: 12000,
-        icon: w.L.divIcon({
-          className: '',
-          html: `
-            <div style="
-              width:36px;
-              height:36px;
-              border-radius:50%;
-              background:#dc2626;
-              color:white;
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              font-weight:900;
-              font-size:18px;
-              border:3px solid #ffffff;
-              box-shadow:0 0 18px rgba(220,38,38,.9);
-              font-family:Arial;
-            ">
-              🎯
-            </div>
-          `,
-          iconSize: [36, 36],
-          iconAnchor: [18, 18],
-          popupAnchor: [0, -18]
-        })
-      }).addTo(aiMap).bindPopup(`
-        <div style="color:#111;font-family:Arial;min-width:250px">
-          <b>🎯 Job Search Result</b><br>
-          <b>${referenceJob['Job ID'] || '-'}</b><br>
-          Priority: ${referenceJob['Priority'] || '-'}<br>
-          Status: ${referenceJob['Status'] || '-'}<br>
-          ${referenceJob['Province Name'] || '-'} / ${referenceJob['District Name'] || '-'}<br><br>
-          ${String(referenceJob['Job Title'] || '-').slice(0, 120)}
-
-          <br><br>
-
-          <button
-            onclick="window.clearAIRoute()"
-            style="
-              background:#dc2626;
-              color:white;
-              border:none;
-              border-radius:8px;
-              padding:7px 12px;
-              font-weight:900;
-              cursor:pointer;
-              font-family:Arial;
-              margin-right:6px;
-            "
-          >
-            🧹 Clear Route
-          </button> 
-      `);
-
-      aiMap.flyTo(coord, 14, {
-        animate: true,
-        duration: 0.8
-      });
-
-      setTimeout(() => {
-        if (coordinateSearchMarker) {
-          coordinateSearchMarker.openPopup();
-        }
-      }, 500);
-
-      return;
-    }
-  }
-
-  if (!coord) {
-    w.showAIOperationsNotice(
-      'ข้อมูลค้นหาไม่ถูกต้อง',
-      'กรุณาใส่พิกัดรูปแบบ Lat,Lng หรือเลข Job ID\n\nตัวอย่าง:\n14.974321,102.083456\nJB26-1731605'
-    );
-    return;
-  }
-
-  let box = w.document.getElementById('coordinateJobScannerBox');
-
-  if (box) {
-    box.remove();
-  }
-
-  if (coordinateSearchMarker && aiMap.hasLayer(coordinateSearchMarker)) {
-  aiMap.removeLayer(coordinateSearchMarker);
-  coordinateSearchMarker = null;
-}
-
-clearNearbyJobHighlights();
-
-coordinateSearchMarker = w.L.marker(coord, {
-  zIndexOffset: 12000,
-  icon: w.L.divIcon({
-    className: '',
-    html: `
-      <div style="
-        width:36px;
-        height:36px;
-        border-radius:50%;
-        background:#0ea5e9;
-        color:white;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-weight:900;
-        font-size:18px;
-        border:3px solid #ffffff;
-        box-shadow:0 0 18px rgba(14,165,233,.9);
-        font-family:Arial;
-      ">
-        📍
-      </div>
-    `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-    popupAnchor: [0, -18]
-  })
-}).addTo(aiMap).bindPopup(`
-  <div style="color:#111;font-family:Arial;min-width:250px">
-    <b>📍 ผลการค้นหาพิกัด</b><br>
-    <b>Lat,Lng</b><br>
-    ${coord[0]}, ${coord[1]}
-
-    <br><br>
-
-    <button
-      onclick="window.clearAIRoute()"
-      style="
-        background:#dc2626;
-        color:white;
-        border:none;
-        border-radius:8px;
-        padding:7px 12px;
-        font-weight:900;
-        cursor:pointer;
-        font-family:Arial;
-      "
-    >
-      🧹 Clear Route
-    </button>
-  </div>
-`);
-
-aiMap.flyTo(coord, 14, {
-  animate: true,
-  duration: 0.8
-});
-
-setTimeout(() => {
-  if (coordinateSearchMarker) {
-    coordinateSearchMarker.openPopup();
-  }
-}, 500);
-
-return;
-
-  let candidates = [];
-
-  for (const job of jobs) {
-    let status = String(job['Status'] || '').toLowerCase();
-
-    if (status.includes('done') || status.includes('cancel')) {
-      continue;
-    }
-
-    let jobCoord = await getJobCoord(job);
-
-    if (!jobCoord) {
-      continue;
-    }
-
-    let dist = distanceKm(
-      coord[0],
-      coord[1],
-      jobCoord[0],
-      jobCoord[1]
-    );
-
-    candidates.push({
-      job: job,
-      coord: jobCoord,
-      dist: dist
-    });
-  }
-
-  console.log('SCAN ENGINEER JOBS RESULT:', {
-  engineerName: engineer.name,
-  engineerKey: engineerKey,
-  matchedJobs: candidates.length,
-  matchedJobIds: candidates.map((item) => {
-    return item.job['Job ID'] || '';
-  })
-});
-
-  candidates.sort((a, b) => a.dist - b.dist);
-
-  let nearbyGroups = groupNearbyJobsByLocation(candidates);
-  let topJobs = nearbyGroups.slice(0, 5);
-
-  if (!topJobs.length) {
-    clearNearbyJobHighlights();
-
-    w.showAIOperationsNotice(
-      'ไม่พบ Job ใกล้พิกัด',
-      'ไม่พบงานที่ยังเปิดอยู่ใกล้พิกัดนี้'
-    );
-    return;
-  }
-
-  let pseudoEngineer = {
-    name: 'Coordinate Search',
-    source: 'COORDINATE',
-    coord: coord,
-    jobId: ''
-  };
-
-  currentNearbyEngineer = pseudoEngineer;
-  currentNearbyJobs = topJobs;
-
-  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
-
-  let lines = [];
-
-  lines.push('จุดค้นหา: ' + coord[0] + ', ' + coord[1]);
-  lines.push('ตำแหน่งอ้างอิง: COORDINATE');
-  lines.push('');
-
-  topJobs.forEach((item, idx) => {
-    let mainJob = item.mainJob || item.job || {};
-    let jobCount = item.count || (item.jobs ? item.jobs.length : 1);
-
-    lines.push(
-      (idx + 1) + '. ' +
-      (mainJob['Job ID'] || '-') +
-      ' | ' +
-      item.dist.toFixed(2) + ' km' +
-      ' | ' +
-      (mainJob['Priority'] || '-') +
-      ' | ' +
-      (mainJob['Status'] || '-') +
-      (jobCount > 1 ? ' | ' + jobCount + ' Jobs' : '')
-    );
-
-    lines.push(
-      '   ' +
-      (mainJob['Province Name'] || '-') +
-      ' / ' +
-      (mainJob['District Name'] || '-')
-    );
-
-    lines.push(
-      '   ' +
-      String(mainJob['Job Title'] || '-').slice(0, 90)
-    );
-
-    lines.push('────────────────');
-  });
-
-  w.showAIOperationsNotice(
-    'Search by Coordinate',
-    lines.join('\n')
-  );
-};
-
-w.scanNearbyJobs = async function () {
-  if (!aiMap) return;
-
-  let engineer = getCurrentNearbyEngineerLocation();
-
-  if (!engineer) {
-    w.showAIOperationsNotice(
-      'ยังไม่ได้เลือกช่าง',
-      'กรุณาเลือกช่างจาก Departed ล่าสุด หรือ On-site ปัจจุบัน / ล่าสุด ก่อนใช้งาน Scan Nearby Jobs'
-    );
-    return;
-  }
-
-  let candidates = [];
-
-  for (const job of jobs) {
-    let status = String(job['Status'] || '').toLowerCase();
-
-    if (status.includes('done') || status.includes('cancel')) {
-      continue;
-    }
-
-    if (
-      engineer.jobId &&
-      String(job['Job ID'] || '') === String(engineer.jobId)
-    ) {
-      continue;
-    }
-
-    let coord = await getJobCoord(job);
-
-    if (!coord) {
-      continue;
-    }
-
-    let dist = distanceKm(
-      engineer.coord[0],
-      engineer.coord[1],
-      coord[0],
-      coord[1]
-    );
-
-    candidates.push({
-      job: job,
-      coord: coord,
-      dist: dist
-    });
-  }
-
-  candidates.sort((a, b) => a.dist - b.dist);
-
-  let nearbyGroups = groupNearbyJobsByLocation(candidates);
-  let topJobs = nearbyGroups.slice(0, 5);
-
-  if (!topJobs.length) {
-    clearNearbyJobHighlights();
-
-    currentNearbyEngineer = null;
-    currentNearbyJobs = [];
-
-    w.showAIOperationsNotice(
-      'ไม่พบ Nearby Jobs',
-      'ไม่พบงานที่ยังเปิดอยู่ใกล้ตำแหน่งล่าสุดของช่างคนนี้'
-    );
-    return;
-  }
-
-  currentNearbyEngineer = engineer;
-  currentNearbyJobs = topJobs;
-
-  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
-
-  let lines = [];
-
-  lines.push('ช่าง: ' + (engineer.name || '-'));
-  lines.push('ตำแหน่งอ้างอิง: ' + engineer.source);
-  lines.push('');
-
-  topJobs.forEach((item, idx) => {
-    let mainJob = item.mainJob || item.job || {};
-    let jobCount = item.count || (item.jobs ? item.jobs.length : 1);
-
-    lines.push(
-      (idx + 1) + '. ' +
-      (mainJob['Job ID'] || '-') +
-      ' | ' +
-      item.dist.toFixed(2) + ' km' +
-      ' | ' +
-      (mainJob['Priority'] || '-') +
-      ' | ' +
-      (mainJob['Status'] || '-') +
-      (jobCount > 1 ? ' | ' + jobCount + ' Jobs' : '')
-    );
-
-    lines.push(
-      '   ' +
-      (mainJob['Province Name'] || '-') +
-      ' / ' +
-      (mainJob['District Name'] || '-')
-    );
-
-    lines.push(
-      '   ' +
-      String(mainJob['Job Title'] || '-').slice(0, 90)
-    );
-
-    lines.push('────────────────');
-  });
-
-  w.showAIOperationsNotice(
-    'Scan Nearby Jobs',
-    lines.join('\n')
-  );
-};
-
-w.scanEngineerJobs = async function () {
-  console.log('SCAN ENGINEER JOBS CLICKED');
-  if (!aiMap) {
-    return;
-  }
-
-
-  let engineer = getCurrentNearbyEngineerLocation();
-
-
-  if (!engineer) {
-    w.showAIOperationsNotice(
-      'ยังไม่ได้เลือกช่าง',
-      'กรุณาเลือกช่างจาก Departed ล่าสุด หรือ On-site ปัจจุบัน / ล่าสุด ก่อนใช้ Scan Engineer Jobs'
-    );
-    return;
-  }
-
-
-  let engineerKey = String(
-  w.currentNearbyEngineerKey ||
-  normalizeEngineerName(
-    engineer.name ||
-    w.currentNearbyEngineerName ||
-    ''
-  )
-)
-  .toLowerCase()
-  .replace(/\s+/g, '')
-  .trim();
-
-
-
-  if (!engineerKey) {
-    w.showAIOperationsNotice(
-      'ไม่พบชื่อช่าง',
-      'ไม่สามารถระบุชื่อช่างที่เลือกได้'
-    );
-    return;
-  }
-
-
-  let candidates = [];
-
-
-  for (const job of jobs) {
-    let status = String(job['Status'] || '')
-      .toLowerCase()
-      .trim();
-
-
-    if (
-      status.includes('done') ||
-      status.includes('cancel')
-    ) {
-      continue;
-    }
-
-
-    let assignKey = String(
-  normalizeEngineerName(job['Assign to'] || '')
-)
-  .toLowerCase()
-  .replace(/\s+/g, '')
-  .trim();
-
-let matchedEngineer =
-  assignKey === engineerKey ||
-  assignKey.includes(engineerKey) ||
-  engineerKey.includes(assignKey);
-
-if (!matchedEngineer) {
-  continue;
-}
-
-
-    let coord = await getJobCoord(job);
-
-
-    if (!coord) {
-      continue;
-    }
-
-
-    let dist = distanceKm(
-      engineer.coord[0],
-      engineer.coord[1],
-      coord[0],
-      coord[1]
-    );
-
-
-    candidates.push({
-      job: job,
-      coord: coord,
-      dist: dist
-    });
-  }
-
-
-  candidates.sort((a, b) => a.dist - b.dist);
-
-
-  let groups = groupNearbyJobsByLocation(candidates);
-
-
-  if (!groups.length) {
-    clearEngineerJobScan();
-
-
-    w.showAIOperationsNotice(
-      'ไม่พบงานของช่าง',
-      'ไม่พบ Job ที่ยังเปิดอยู่และ Assign ให้ช่างคนนี้'
-    );
-    return;
-  }
-
-
-  drawEngineerJobScan(engineer, groups);
-
-
-  let nearGroups = groups.filter((item) => {
-    return item.dist <= ENGINEER_JOB_NEAR_LIMIT_KM;
-  });
-
-
-  let middleGroups = groups.filter((item) => {
-    return (
-      item.dist > ENGINEER_JOB_NEAR_LIMIT_KM &&
-      item.dist <= ENGINEER_JOB_MIDDLE_LIMIT_KM
-    );
-  });
-
-
-  let farGroups = groups.filter((item) => {
-    return item.dist > ENGINEER_JOB_MIDDLE_LIMIT_KM;
-  });
-
-
-  let totalJobs = groups.reduce((sum, item) => {
-    return (
-      sum +
-      (
-        item.count ||
-        (Array.isArray(item.jobs) ? item.jobs.length : 1)
-      )
-    );
-  }, 0);
-
-
-  let lines = [];
-
-
-  lines.push('ช่าง: ' + (engineer.name || '-'));
-  lines.push('ตำแหน่งอ้างอิง: ' + (engineer.source || '-'));
-  lines.push('Job ทั้งหมด: ' + totalJobs);
-  lines.push('ตำแหน่งงานทั้งหมด: ' + groups.length);
-  lines.push('');
-  lines.push('🟢 ใกล้ไม่เกิน 20 km: ' + nearGroups.length + ' จุด');
-  lines.push('🟠 ระยะกลาง 20-50 km: ' + middleGroups.length + ' จุด');
-  lines.push('🔴 ไกลมากกว่า 50 km: ' + farGroups.length + ' จุด');
-
-
-  w.showAIOperationsNotice(
-    'Scan Engineer Jobs',
-    lines.join('\n')
-  );
-};
-
-w.removeNearbyJobByRank = function (index) {
-  index = Number(index);
-
-
-  if (
-    isNaN(index) ||
-    index < 0 ||
-    index >= currentNearbyJobs.length
-  ) {
-    return;
-  }
-
-
-  currentNearbyJobs.splice(index, 1);
-
-
-  clearNearbyJobHighlights();
-
-
-  if (!currentNearbyEngineer || currentNearbyJobs.length === 0) {
-    currentNearbyJobs = [];
-    return;
-  }
-
-
-  drawNearbyJobHighlights(currentNearbyEngineer, currentNearbyJobs);
-};
 
 function normalizeSiteSearchText(v) {
   let tokens =
@@ -8385,7 +6099,7 @@ engineerTravelLines.push(routeFlowLine);
             </div>
           `,
           iconSize: [170, 42],
-iconAnchor: [85, 62],
+          iconAnchor: [85, 21],
         }),
       }).addTo(aiMap);
 
@@ -8647,7 +6361,7 @@ async function drawDepartedTravelForEngineer(assignKey) {
           </div>
         `,
         iconSize: [240, 76],
-iconAnchor: [120, 100],
+        iconAnchor: [120, 38],
       }),
     }).addTo(aiMap);
 
@@ -8718,7 +6432,7 @@ iconAnchor: [120, 100],
           </div>
         `,
         iconSize: [230, 72],
-iconAnchor: [115, 92],
+        iconAnchor: [115, 36],
       }),
     }).addTo(aiMap);
 
@@ -8759,7 +6473,6 @@ function debugFindSite(title, code) {
     siteCoordItem: SITE_COORD[code]
   });
 }
-
 function findSiteCoordFromTitle(title) {
   if (!title || !SITE_COORD) {
     return null;
@@ -8870,38 +6583,27 @@ function findSiteCoordFromTitle(title) {
 
 async function getJobCoord(job) {
   let title = job['Job Title'] || '';
-
+  if (String(title).includes('3702_087')) {
+  console.log('CHECK 3702_087:', {
+    title: title,
+    siteCoordCount: Object.keys(SITE_COORD || {}).length,
+    siteIndexCount: Object.keys(SITE_COORD_INDEX || {}).length,
+    directIndex: SITE_COORD_INDEX[normalizeSiteCodeKey('3702_087')],
+    found: findSiteCoordFromTitle(title)
+  });
+}
   let gps = extractGPS(title);
 
   if (gps) {
     return [gps.lat, gps.lng];
   }
 
-  // 1. ค้นหารหัสหรือชื่อ INF / IPV / BIPV / INL ก่อน
-let specialCoord = findSpecialSiteCoordFromTitle(title);
+  let siteCoord = findSiteCoordFromTitle(title);
 
-if (specialCoord) {
-  console.log('SPECIAL SITE COORD FOUND:', {
-    jobId: job['Job ID'] || '',
-    type: specialCoord.type,
-    key: specialCoord.key,
-    matchedBy: specialCoord.matchedBy,
-    matchedValue: specialCoord.matchedValue,
-    lat: specialCoord.lat,
-    lng: specialCoord.lng
-  });
+  if (siteCoord) {
+    return [siteCoord.lat, siteCoord.lng];
+  }
 
-  return [specialCoord.lat, specialCoord.lng];
-}
-
-// 2. ถ้าไม่พบชื่อหรือรหัสพิเศษ ให้ใช้ Site code เช่น 454_095
-let siteCoord = findSiteCoordFromTitle(title);
-
-if (siteCoord) {
-  return [siteCoord.lat, siteCoord.lng];
-}
-
-  // 3. ถ้ายังไม่พบ ให้ใช้ District Coordinate
   let province = job['Province Name'] || '';
   let district = job['District Name'] || '';
 
@@ -8917,7 +6619,6 @@ if (siteCoord) {
 
   return null;
 }
-
 
         function getLatestOnsiteJob() {
           let selected = (w.selectedEngineer || '').toLowerCase().trim();
@@ -9132,14 +6833,6 @@ if (routeBtn) {
 
   clearDistanceMeasure();
   clearEngineerTravel();
-  clearNearbyJobHighlights();
-  clearCoordinateSearchMarker();
-  clearEngineerJobScan();
-
-  if (coordinateSearchMarker && aiMap.hasLayer(coordinateSearchMarker)) {
-  aiMap.removeLayer(coordinateSearchMarker);
-  coordinateSearchMarker = null;
-}
 
   engineerTravelOn = false;
 
@@ -9447,9 +7140,6 @@ w.document.addEventListener('click', function (e) {
           }
         };
         w.selectedEngineer = '';
-w.currentNearbyEngineerKey = '';
-w.currentNearbyEngineerName = '';
-w.window.changeView = w.changeView;
 
         w.filterEngineer = function (assign, btn) {
           w.selectedEngineer = (assign || '').toLowerCase().trim();
