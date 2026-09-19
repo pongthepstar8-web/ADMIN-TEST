@@ -5097,29 +5097,48 @@ function clearRouteSimulatorDisplay() {
 }
 
 async function drawRouteSimulator() {
-clearRouteSimulatorDisplay();
-if (!aiMap || routeSimPoints.length < 2) {
-return;
-}
-let points = routeSimPoints
-.map((point) => {
-let lat = Number(point.lat);
-let lng = Number(point.lng);
-if (isNaN(lat) || isNaN(lng)) {
-return null;
-}
-return [lat, lng];
-})
-.filter(Boolean);
-if (points.length < 2) {
-return;
+  if (routeSimLine) {
+    aiMap.removeLayer(routeSimLine);
+    routeSimLine = null;
+  }
+
+  if (routeSimLabel) {
+    aiMap.removeLayer(routeSimLabel);
+    routeSimLabel = null;
+  }
+  routeSimMarkers.forEach((m) => {
+  aiMap.removeLayer(m);
+});
+
+routeSimMarkers = [];
+
+  if (routeSimPoints.length < 2) {
+    return;
+  }
+
+  let points = routeSimPoints.map((p) => {
+  return [
+    Number(p.lat),
+    Number(p.lng)
+  ];
+});
+
+try {
+  let route = await getRoadRouteFromOSRM(points);
+
+  if (!route || !route.latlngs || !route.latlngs.length) {
+  /*
+   * เส้นสำรองแสดงอยู่แล้ว
+   * จึงไม่ต้องวาดซ้ำ
+   */
+  return;
 }
 
 /*
  * OSRM ตอบแล้ว
  * ล้างเส้นสำรองก่อนวาดเส้นถนนจริง
  */
-  clearRouteSimulatorDisplay();
+clearRouteSimulatorDisplay();
   drawRouteSimulatorFallback(points);
   return;
 }
