@@ -5201,7 +5201,9 @@ iconAnchor: [110, 23],
 }
 
 function drawRouteSimulatorFallback(start, end) {
-  let fallbackBaseLine = w.L.polyline([start, end], {
+  let fallbackBaseLine = w.L.polyline(
+  routeSimPoints.map((point) => point.coord || point),
+  {
   color: '#0ea5e9',
   weight: 7,
   opacity: 0.6,
