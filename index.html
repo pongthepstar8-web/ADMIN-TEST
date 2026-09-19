@@ -5225,15 +5225,9 @@ iconAnchor: [110, 23],
       padding: [60, 60],
     });
   } catch (err) {
-  console.warn(
-    'Route simulator failed, keep fallback route:',
-    err
-  );
+  console.warn('Route simulator failed:', err);
 
-  /*
-   * ไม่ต้องทำอะไรเพิ่ม
-   * เพราะเส้นสำรอง A → B → C → D แสดงอยู่แล้ว
-   */
+  drawRouteSimulatorFallback(points);
 }
 }
 
@@ -5534,7 +5528,7 @@ routeSimMarkers = [];
 
   let timeoutId = setTimeout(() => {
     controller.abort();
-  }, 3000);
+  }, 5000);
 
   try {
     let response = await fetch(url, {
