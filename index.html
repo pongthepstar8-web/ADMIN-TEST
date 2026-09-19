@@ -5347,52 +5347,142 @@ routeSimMarkers = [];
             alert('Routing error: ไม่สามารถดึงเส้นทางจาก OSRM ได้');
           }
         }
+
         async function getRoadRouteFromOSRM(points) {
-          if (!points || points.length < 2) {
-            return null;
-          }
+  if (!Array.isArray(points) || points.length < 2) {
+    return null;
+  }
 
-          const coords = points.map((p) => `${p[1]},${p[0]}`).join(';');
+  let validPoints = points
+    .map((point) => {
+      if (Array.isArray(point) && point.length >= 2) {
+        return [
+          Number(point[0]),
+          Number(point[1])
+        ];
+      }
 
-          const url =
-            `https://router.project-osrm.org/route/v1/driving/${coords}` +
-            `?overview=full&geometries=geojson&steps=false`;
+      if (
+        point &&
+        !isNaN(Number(point.lat)) &&
+        !isNaN(Number(point.lng))
+      ) {
+        return [
+          Number(point.lat),
+          Number(point.lng)
+        ];
+      }
 
-          const res = await fetch(url);
+      return null;
+    })
+    .filter((point) => {
+      return (
+        point &&
+        !isNaN(point[0]) &&
+        !isNaN(point[1])
+      );
+    });
 
-          const json = await res.json();
+  if (validPoints.length < 2) {
+    return null;
+  }
 
-          if (
-            !json ||
-            json.code !== 'Ok' ||
-            !json.routes ||
-            !json.routes.length
-          ) {
-            console.warn('OSRM route failed:', json);
-            return null;
-          }
+  let coords = validPoints
+    .map((point) => {
+      return point[1] + ',' + point[0];
+    })
+    .join(';');
 
-          const route = json.routes[0];
+  let url =
+    'https://router.project-osrm.org/route/v1/driving/' +
+    coords +
+    '?overview=full&geometries=geojson&steps=false';
 
-          const latlngs = route.geometry.coordinates.map((c) => [c[1], c[0]]);
+  let controller = new AbortController();
 
-          let legs = (route.legs || []).map((leg, index) => {
-  return {
-    index: index,
-    from: index + 1,
-    to: index + 2,
-    distanceKm: leg.distance / 1000,
-    durationMin: leg.duration / 60
-  };
-});
+  let timeoutId = setTimeout(() => {
+    controller.abort();
+  }, 5000);
 
-return {
-  latlngs: latlngs,
-  distanceKm: route.distance / 1000,
-  durationMin: route.duration / 60,
-  legs: legs
-};
-        }
+  try {
+    let response = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      console.warn(
+        'OSRM HTTP ERROR:',
+        response.status,
+        response.statusText
+      );
+
+      return null;
+    }
+
+    let json = await response.json();
+
+    if (
+      !json ||
+      json.code !== 'Ok' ||
+      !json.routes ||
+      !json.routes.length
+    ) {
+      console.warn('OSRM ROUTE NOT FOUND:', json);
+      return null;
+    }
+
+    let route = json.routes[0];
+
+    let latlngs = route.geometry.coordinates.map(
+      (coord) => {
+        return [
+          Number(coord[1]),
+          Number(coord[0])
+        ];
+      }
+    );
+
+    let legs = (route.legs || []).map(
+      (leg, index) => {
+        return {
+          index: index,
+          from: index + 1,
+          to: index + 2,
+          distanceKm:
+            Number(leg.distance || 0) / 1000,
+          durationMin:
+            Number(leg.duration || 0) / 60
+        };
+      }
+    );
+
+    return {
+      latlngs: latlngs,
+      distanceKm:
+        Number(route.distance || 0) / 1000,
+      durationMin:
+        Number(route.duration || 0) / 60,
+      legs: legs
+    };
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      console.warn(
+        'OSRM TIMEOUT: ใช้เส้นตรงสำรอง'
+      );
+    } else {
+      console.warn(
+        'OSRM FETCH FAILED: ใช้เส้นตรงสำรอง',
+        err
+      );
+    }
+
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
         function clearDistanceMeasure() {
           if (measureLine) {
